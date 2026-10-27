@@ -34,12 +34,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ currentSection }) => {
 
   const personas: { role: Role; name: string; title: string; icon: any }[] = [
     {
-      role: 'SUPER_ADMIN',
-      name: 'Dr. Arvind Sharma',
-      title: 'Chancellor & Trustee',
-      icon: ShieldCheck
-    },
-    {
       role: 'ADMIN',
       name: 'Rachel Vance',
       title: 'Operations Director',

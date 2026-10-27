@@ -6,17 +6,20 @@ import {
   Minimize2,
   ChevronDown,
   Menu,
-  Shield,
   Smartphone,
   LogOut,
   Sliders,
   CheckCircle2,
   AlertCircle,
   Calendar,
-  X
+  X,
+  UserCheck,
+  GraduationCap,
+  Users
 } from 'lucide-react';
 import { useIMS } from '../../context/IMSContext';
 import { Role } from '../../types/ims';
+import { AveriqLogo } from './AveriqLogo';
 
 interface AveriqTopNavProps {
   onToggleMobileSidebar: () => void;
@@ -37,9 +40,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
     setMobilePreviewOpen,
     students,
     teachers,
-    inquiries,
-    tests,
-    feePayments
+    inquiries
   } = useIMS();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +48,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(4);
+  const [unreadNotifications, setUnreadNotifications] = useState(3);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -136,40 +137,48 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
     {
       id: 2,
       title: 'Parent Teacher Meeting',
-      desc: 'Scheduled for 28 May at 10:00 AM',
+      desc: 'Scheduled for 15 Nov at 10:00 AM',
       time: '1h ago',
       icon: Calendar,
       color: 'text-blue-400 bg-blue-500/10'
     },
     {
       id: 3,
-      title: 'Pending Fee Alert',
-      desc: '32 students have fees due this week',
-      time: '3h ago',
+      title: 'Mathematics Unit Test Ch 5',
+      desc: 'Scheduled on 12 Nov 2025 at 10:00 AM',
+      time: '2h ago',
       icon: AlertCircle,
       color: 'text-amber-400 bg-amber-500/10'
-    },
-    {
-      id: 4,
-      title: 'New Student Inquiry',
-      desc: 'Kavita Verma inquired for Class 11 Science',
-      time: '5h ago',
-      icon: Bell,
-      color: 'text-purple-400 bg-purple-500/10'
     }
   ];
 
+  // Permitted roles (No Super Admin!)
   const rolesList: { role: Role; label: string; desc: string }[] = [
-    { role: 'ADMIN', label: 'School Admin', desc: 'Rachel Vance' },
-    { role: 'SUPER_ADMIN', label: 'Super Admin', desc: 'Trustee / Board' },
-    { role: 'TEACHER', label: 'Faculty Lead', desc: 'Prof. Vikram Nair' },
-    { role: 'STUDENT', label: 'Student Portal', desc: 'Aarav Patel' },
-    { role: 'PARENT', label: 'Parent Portal', desc: 'Meera Patel' }
+    { role: 'STUDENT', label: 'Student Portal', desc: 'Rohan Sharma (Class 10A)' },
+    { role: 'PARENT', label: 'Parent Portal', desc: 'Mr. & Mrs. Sharma' },
+    { role: 'ADMIN', label: 'Administrator', desc: 'School Admin' },
+    { role: 'TEACHER', label: 'Teacher Dashboard', desc: 'Prof. Rajesh Sir' }
   ];
 
+  // Profile avatar and name per role
+  const getPersonaDetails = () => {
+    if (role === 'STUDENT') {
+      return { initials: 'RS', name: 'Rohan Sharma', roleLabel: 'Class 10 | Science', color: 'from-blue-600 to-indigo-600' };
+    }
+    if (role === 'PARENT') {
+      return { initials: 'MS', name: 'Mr. & Mrs. Sharma', roleLabel: 'Parent Guardian', color: 'from-indigo-600 to-purple-600' };
+    }
+    if (role === 'TEACHER') {
+      return { initials: 'RS', name: 'Rajesh Sir', roleLabel: 'Maths Teacher', color: 'from-emerald-600 to-teal-600' };
+    }
+    return { initials: 'AD', name: 'Administrator', roleLabel: 'School Admin', color: 'from-blue-600 to-cyan-600' };
+  };
+
+  const persona = getPersonaDetails();
+
   return (
-    <header className="sticky top-0 z-30 h-16 bg-[#0B132B] border-b border-slate-800/80 px-4 lg:px-8 flex items-center justify-between gap-4 text-white">
-      {/* Left Area: Mobile Menu Trigger + School Brand */}
+    <header className="sticky top-0 z-30 h-16 bg-[#0A192F] border-b border-[#1E293B]/70 px-4 lg:px-8 flex items-center justify-between gap-3 text-white">
+      {/* Left Area: Mobile Menu Trigger + Averiq Brand */}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -180,23 +189,23 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
-            <Shield className="w-4 h-4 fill-white/20" />
-          </div>
-          <div className="hidden sm:flex flex-col">
-            <span className="font-extrabold text-base tracking-wider text-white leading-tight">
-              AVERTQ
-            </span>
-            <span className="text-[10px] text-slate-400 font-medium">
-              School Management System
-            </span>
-          </div>
-        </div>
+        <AveriqLogo
+          className="w-7 h-7"
+          showText={true}
+          textColor="text-white"
+          subtextColor="text-blue-400"
+          tagline={
+            role === 'STUDENT'
+              ? 'Student Portal'
+              : role === 'PARENT'
+              ? 'Parent Portal'
+              : 'School Management'
+          }
+        />
       </div>
 
-      {/* Center Area: Global Search Bar */}
-      <div ref={searchRef} className="relative flex-1 max-w-md mx-2 sm:mx-6">
+      {/* Center Area: Global Search Input */}
+      <div ref={searchRef} className="relative flex-1 max-w-sm lg:max-w-md mx-2 sm:mx-4 hidden sm:block">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
@@ -205,7 +214,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
             onChange={e => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             placeholder="Search students, staff, fees, etc..."
-            className="w-full bg-slate-900/90 border border-slate-700/80 text-white placeholder-slate-400 text-xs sm:text-sm rounded-xl pl-9 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full bg-[#071324] border border-slate-700/80 text-white placeholder-slate-400 text-xs sm:text-sm rounded-xl pl-9 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-[#0056D6] focus:border-transparent transition-all"
           />
           {searchQuery && (
             <button
@@ -220,7 +229,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
 
         {/* Live Search Results Dropdown */}
         {isSearchFocused && searchQuery.trim().length > 0 && (
-          <div className="absolute left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 text-xs">
+          <div className="absolute left-0 right-0 mt-2 bg-[#0A192F] border border-slate-700 rounded-xl shadow-2xl p-2 z-50 text-xs">
             {hasSearchResults ? (
               <div className="space-y-2 max-h-72 overflow-y-auto">
                 {matchingStudents.length > 0 && (
@@ -294,20 +303,56 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
               </div>
             ) : (
               <div className="p-4 text-center text-slate-400">
-                No students or staff found matching "{searchQuery}"
+                No matching students or records found
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Right Area: Fullscreen, Notifications, User Profile */}
+      {/* Right Area: Portal Switcher, Fullscreen, Notifications, User Profile */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Interactive Dual Portal Switcher Tabs */}
+        <div className="flex items-center p-1 bg-[#071324] border border-slate-700/80 rounded-xl text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => {
+              setRole('STUDENT');
+              onNavigateTab('dash');
+            }}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+              role === 'STUDENT'
+                ? 'bg-[#0056D6] text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <GraduationCap className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Student Portal</span>
+            <span className="sm:hidden">Student</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setRole('PARENT');
+              onNavigateTab('dash');
+            }}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
+              role === 'PARENT'
+                ? 'bg-[#0056D6] text-white shadow-xs'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Parent Portal</span>
+            <span className="sm:hidden">Parent</span>
+          </button>
+        </div>
+
         {/* Fullscreen Button */}
         <button
           type="button"
           onClick={toggleFullscreen}
-          className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors hidden sm:flex items-center justify-center"
+          className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors hidden md:flex items-center justify-center"
           title={isFullscreen ? 'Exit Full Screen' : 'Toggle Full Screen'}
         >
           {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -323,7 +368,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
           >
             <Bell className="w-4 h-4" />
             {unreadNotifications > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white font-mono text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-[#0B132B]">
+              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#D32F2F] text-white font-mono text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-[#0A192F]">
                 {unreadNotifications}
               </span>
             )}
@@ -331,7 +376,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
 
           {/* Notifications Dropdown */}
           {isNotificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-3 z-50 text-xs">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-[#0A192F] border border-slate-700 shadow-2xl p-3 z-50 text-xs">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
                 <span className="font-bold text-white text-sm">Notifications</span>
                 {unreadNotifications > 0 && (
@@ -350,7 +395,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                   return (
                     <div
                       key={n.id}
-                      className="p-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors flex items-start gap-3"
+                      className="p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 transition-colors flex items-start gap-3"
                     >
                       <div className={`p-2 rounded-lg shrink-0 ${n.color}`}>
                         <Icon className="w-4 h-4" />
@@ -366,39 +411,26 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                   );
                 })}
               </div>
-              <div className="pt-2 mt-2 border-t border-slate-800 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onNavigateTab('rep');
-                    setIsNotificationsOpen(false);
-                  }}
-                  className="text-xs text-blue-400 font-medium hover:underline"
-                >
-                  View All School Notices
-                </button>
-              </div>
             </div>
           )}
         </div>
 
-        {/* Administrator Profile Dropdown */}
+        {/* User Profile Dropdown */}
         <div ref={profileRef} className="relative">
           <button
             type="button"
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors text-left"
+            className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-[#071324] hover:bg-slate-800 border border-slate-700/80 transition-colors text-left"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-blue-500/30 shrink-0">
-              {currentUser.firstName?.[0] || 'A'}
-              {currentUser.lastName?.[0] || 'D'}
+            <div className={`w-8 h-8 rounded-full bg-gradient-to-tr ${persona.color} text-white font-bold text-xs flex items-center justify-center ring-2 ring-blue-500/30 shrink-0`}>
+              {persona.initials}
             </div>
             <div className="hidden md:block leading-tight text-left">
-              <div className="text-xs font-semibold text-white flex items-center gap-1.5">
-                <span>{currentUser.firstName || 'Rachel'} {currentUser.lastName || 'Vance'}</span>
+              <div className="text-xs font-semibold text-white">
+                {persona.name}
               </div>
               <div className="text-[10px] text-blue-400 font-medium">
-                {role === 'ADMIN' ? 'Administrator' : role.replace('_', ' ')}
+                {persona.roleLabel}
               </div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1 shrink-0" />
@@ -406,20 +438,20 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
 
           {/* Profile Dropdown Menu */}
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2 z-50 text-xs">
+            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#0A192F] border border-slate-700 shadow-2xl p-2 z-50 text-xs">
               <div className="p-3 border-b border-slate-800">
                 <div className="font-bold text-white text-sm">
-                  {currentUser.firstName || 'Rachel'} {currentUser.lastName || 'Vance'}
+                  {persona.name}
                 </div>
-                <div className="text-slate-400 text-[11px]">admin@averiqschool.edu</div>
+                <div className="text-slate-400 text-[11px]">averiq.portal@school.edu</div>
                 <div className="inline-block mt-1 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold text-[10px]">
-                  Role: {role.replace('_', ' ')}
+                  {persona.roleLabel}
                 </div>
               </div>
 
               <div className="py-2 border-b border-slate-800">
                 <div className="px-3 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Switch Active Persona
+                  Switch Active Portal View
                 </div>
                 {rolesList.map(item => (
                   <button
@@ -428,10 +460,11 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                     onClick={() => {
                       setRole(item.role);
                       setIsProfileOpen(false);
+                      onNavigateTab('dash');
                     }}
-                    className={`w-full text-left px-3 py-1.5 rounded-lg flex items-center justify-between transition-colors ${
+                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${
                       role === item.role
-                        ? 'bg-blue-600 text-white font-semibold'
+                        ? 'bg-[#0056D6] text-white font-semibold'
                         : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                     }`}
                   >
@@ -462,7 +495,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                   className="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2"
                 >
                   <Sliders className="w-4 h-4 text-purple-400" />
-                  <span>School Settings</span>
+                  <span>Portal Settings</span>
                 </button>
                 {onSwitchRole && (
                   <button

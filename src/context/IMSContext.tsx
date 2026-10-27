@@ -171,10 +171,10 @@ interface IMSContextType {
 const IMSContext = createContext<IMSContextType | undefined>(undefined);
 
 export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRoleState] = useState<Role>('ADMIN');
-  const [currentUserId, setCurrentUserId] = useState<string>('u-admin');
+  const [role, setRoleState] = useState<Role>('STUDENT');
+  const [currentUserId, setCurrentUserId] = useState<string>('u-student-aarav');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  const [viewportMode, setViewportMode] = useState<ViewportMode>('mobile'); // Default to 'mobile' app size as requested!
+  const [viewportMode, setViewportMode] = useState<ViewportMode>('desktop');
   const [isMobilePreviewOpen, setMobilePreviewOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -214,8 +214,7 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setRole = (newRole: Role) => {
     setRoleState(newRole);
-    if (newRole === 'SUPER_ADMIN') setCurrentUserId('u-superadmin');
-    else if (newRole === 'ADMIN') setCurrentUserId('u-admin');
+    if (newRole === 'ADMIN') setCurrentUserId('u-admin');
     else if (newRole === 'TEACHER') setCurrentUserId('u-teacher-mehta');
     else if (newRole === 'STUDENT') setCurrentUserId('u-student-aarav');
     else if (newRole === 'PARENT') setCurrentUserId('u-parent-aarav');

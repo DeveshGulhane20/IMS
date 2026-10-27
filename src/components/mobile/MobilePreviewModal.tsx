@@ -117,44 +117,6 @@ export const MobilePreviewModal: React.FC = () => {
 
         {/* Screen Content Viewport */}
         <div className="flex-1 bg-slate-50 dark:bg-slate-900 overflow-y-auto p-4 space-y-3.5 text-slate-800 dark:text-slate-200">
-          {/* SUPER ADMIN MOBILE: SuperAdminOverviewScreen */}
-          {role === 'SUPER_ADMIN' && (
-            <div className="space-y-3">
-              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] text-slate-400 block">Total Campus Students</span>
-                <span className="text-xl font-bold font-mono">1,840</span>
-                <span className="text-[10px] text-emerald-600 font-mono block mt-1">+4.8% this cycle</span>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] text-slate-400 block">Quick Revenue Widget</span>
-                <span className="text-xl font-bold font-mono text-[#0D9488]">$2,410,000</span>
-                <span className="text-[10px] text-slate-500 block mt-0.5">Target: $2.5M (96.4%)</span>
-              </div>
-
-              {/* Emergency Notice Dispatcher */}
-              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
-                <span className="text-xs font-bold block text-slate-900 dark:text-slate-100">
-                  Emergency Notice Dispatcher
-                </span>
-                <input
-                  type="text"
-                  placeholder="Immediate broadcast alert..."
-                  value={mobileNoticeText}
-                  onChange={e => setMobileNoticeText(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
-                />
-                <button
-                  type="button"
-                  onClick={handleMobileNoticeSend}
-                  className="w-full py-1.5 text-xs font-semibold rounded bg-[#DC2626] text-white flex items-center justify-center gap-1.5"
-                >
-                  <Send className="w-3 h-3" />
-                  <span>{mobileNoticeSent ? 'Broadcast Sent ✓' : 'Dispatch Push Alert'}</span>
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* ADMIN MOBILE: AdminDashboardScreen & AdminStudentListScreen */}
           {role === 'ADMIN' && (

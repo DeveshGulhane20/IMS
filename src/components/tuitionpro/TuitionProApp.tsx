@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   Receipt,
   BellRing,
+  Bell,
   Send,
   X,
   Clock,
@@ -53,7 +54,16 @@ import { WhatsAppFeeReminders, DailySnapshotCard } from '../common/ValueAddFeatu
 import { AveriqSidebar } from '../averiq/AveriqSidebar';
 import { AveriqTopNav } from '../averiq/AveriqTopNav';
 import { AveriqDashboard } from '../averiq/AveriqDashboard';
+import { AveriqStudentPortal } from '../averiq/AveriqStudentPortal';
+import { AveriqParentPortal } from '../averiq/AveriqParentPortal';
 import { QuickActionModals } from '../averiq/QuickActionModals';
+import { AveriqStudentsDirectory } from '../averiq/AveriqStudentsDirectory';
+import { AveriqTeachersDirectory } from '../averiq/AveriqTeachersDirectory';
+import { AveriqAttendanceAnalytics } from '../averiq/AveriqAttendanceAnalytics';
+import { AveriqFeeManagement } from '../averiq/AveriqFeeManagement';
+import { AveriqInquiriesCRM } from '../averiq/AveriqInquiriesCRM';
+import { AveriqEventsCalendar } from '../averiq/AveriqEventsCalendar';
+import { AveriqAcademicReportsView } from '../averiq/AveriqAcademicReportsView';
 
 interface TuitionProAppProps {
   onSwitchRole?: () => void;
@@ -200,11 +210,13 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
   ];
 
   // Role access control
-  const accessibleTabs = role === 'ADMIN' || role === 'SUPER_ADMIN'
+  const accessibleTabs = role === 'ADMIN'
     ? navItems.map(n => n.id)
     : role === 'TEACHER'
     ? ['att', 'tb', 'ex', 'mk', 'pf', 'mat']
-    : ['por'];
+    : role === 'STUDENT'
+    ? ['dash', 'stu', 'att', 'tb', 'mk', 'mat', 'ex', 'notif', 'cal', 'set']
+    : ['dash', 'por', 'stu', 'att', 'fee', 'mk', 'tb', 'inq', 'ptm', 'set'];
 
   const filteredNavItems = navItems.filter(n => accessibleTabs.includes(n.id));
 
@@ -381,92 +393,39 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
-          {/* TAB 1: AVERIQ REDESIGNED DASHBOARD */}
+          {/* TAB 1: AVERIQ REDESIGNED DASHBOARD (ROLE-ADAPTIVE) */}
           {activeTab === 'dash' && (
-            <AveriqDashboard
-              onNavigateTab={(tabId) => {
-                setActiveTab(tabId);
-                setProfileModalStudent(null);
-              }}
-              onOpenModal={(type) => setQuickModal(type)}
-            />
+            role === 'STUDENT' ? (
+              <AveriqStudentPortal
+                onNavigateTab={(tabId) => {
+                  setActiveTab(tabId);
+                  setProfileModalStudent(null);
+                }}
+              />
+            ) : role === 'PARENT' ? (
+              <AveriqParentPortal
+                onNavigateTab={(tabId) => {
+                  setActiveTab(tabId);
+                  setProfileModalStudent(null);
+                }}
+              />
+            ) : (
+              <AveriqDashboard
+                onNavigateTab={(tabId) => {
+                  setActiveTab(tabId);
+                  setProfileModalStudent(null);
+                }}
+                onOpenModal={(type) => setQuickModal(type)}
+              />
+            )
           )}
 
           {/* TEACHERS TAB */}
-          {activeTab === 'tea' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    Faculty & Teaching Staff
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Department faculty, instructional workload, and qualifications
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setQuickModal('teacher')}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Faculty</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {teachers.map(teacher => (
-                  <div
-                    key={teacher.id}
-                    className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 font-bold flex items-center justify-center text-sm">
-                          {teacher.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                            {teacher.name}
-                          </h3>
-                          <span className="text-[11px] text-purple-600 font-medium">
-                            {teacher.specialization}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-400">
-                        {teacher.employeeCode}
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-slate-500 space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <div className="flex justify-between">
-                        <span>Qualification:</span>
-                        <strong className="text-slate-700 dark:text-slate-300 font-medium">
-                          {teacher.qualification}
-                        </strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Workload:</span>
-                        <strong className="text-slate-700 dark:text-slate-300 font-mono font-medium">
-                          {teacher.workloadHoursPerWeek} hrs / week
-                        </strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Permitted Modules:</span>
-                        <span className="text-slate-600 dark:text-slate-400 truncate max-w-[140px]">
-                          {teacher.permittedModules}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {activeTab === 'tea' && <AveriqTeachersDirectory />}
 
           {/* TAB 2: STUDENTS */}
-          {activeTab === 'stu' && (
+          {activeTab === 'stu' && <AveriqStudentsDirectory />}
+          {false && activeTab === 'stu' && (
             <div className="space-y-4">
               {/* Profile Card if student selected */}
               {profileModalStudent && (
@@ -655,7 +614,8 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
           )}
 
           {/* TAB 3: INQUIRIES & ADMISSIONS PIPELINE */}
-          {activeTab === 'inq' && (
+          {activeTab === 'inq' && <AveriqInquiriesCRM />}
+          {false && activeTab === 'inq' && (
             <div className="space-y-4">
               {/* New inquiry */}
               <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f]">
@@ -798,7 +758,8 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
           )}
 
           {/* TAB 4: FEES */}
-          {activeTab === 'fee' && (
+          {activeTab === 'fee' && <AveriqFeeManagement />}
+          {false && activeTab === 'fee' && (
             <div className="space-y-4">
               {/* Record Payment Form */}
               <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f]">
@@ -958,11 +919,10 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
           )}
 
           {/* TAB 5: ATTENDANCE */}
-          {activeTab === 'att' && (
-            <div className="space-y-4">
-              <PremiumAttendance isOnline={isOnline} />
-            </div>
-          )}
+          {activeTab === 'att' && <AveriqAttendanceAnalytics />}
+
+          {/* EVENTS & CALENDAR */}
+          {(activeTab === 'evt' || activeTab === 'cal') && <AveriqEventsCalendar />}
 
           {/* TAB 6: TIMETABLE & SUBSTITUTE FINDER */}
           {(activeTab === 'tb' || (activeTab === 'set' && activeSettingsSubTab === 'tb')) && (
@@ -1130,8 +1090,9 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
-          {/* TAB 7: EXAMS */}
-          {activeTab === 'ex' && (
+          {/* TAB 7: EXAMS & SEMESTERS */}
+          {activeTab === 'ex' && <AveriqAcademicReportsView />}
+          {false && activeTab === 'ex' && (
             <div className="space-y-4">
               {/* Schedule Exam */}
               <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f]">
@@ -1274,8 +1235,9 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
-          {/* TAB 8: MARKS & RESULTS */}
-          {(activeTab === 'mk' || (activeTab === 'rep' && activeReportsSubTab === 'mk')) && (
+          {/* TAB 8: MARKS, RESULTS & REPORTS */}
+          {(activeTab === 'mk' || activeTab === 'rep') && <AveriqAcademicReportsView />}
+          {false && (activeTab === 'mk' || (activeTab === 'rep' && activeReportsSubTab === 'mk')) && (
             <div className="space-y-4">
               {/* Exam selector */}
               <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f] space-y-3">
@@ -2163,91 +2125,44 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
 
           {/* TAB 15: PARENT PORTAL */}
           {activeTab === 'por' && (
+            <AveriqParentPortal
+              onNavigateTab={(tabId) => {
+                setActiveTab(tabId);
+                setProfileModalStudent(null);
+              }}
+            />
+          )}
+
+          {/* TAB 16: NOTIFICATIONS */}
+          {activeTab === 'notif' && (
             <div className="space-y-4">
-              {(() => {
-                const s = students.find(st => st.name === parentChild) || students[0];
-                const studentAtt = attendanceRecords.filter(a => a.studentName === s.name);
-                const p = studentAtt.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length;
-                const attRate = studentAtt.length ? Math.round((p / studentAtt.length) * 100) : 100;
-                const bal = getStudentBalance(s.name);
-
-                return (
-                  <>
-                    <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f] space-y-3">
-                      <div className="flex justify-between items-center">
-                        <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100">Parent portal</h3>
-                        <div className="flex items-center gap-1.5 text-xs">
-                          <span className="text-slate-500">Child:</span>
-                          <select
-                            value={parentChild}
-                            onChange={e => setParentChild(e.target.value)}
-                            className="px-2 py-0.5 rounded border bg-transparent font-medium"
-                          >
-                            {students.map(st => (
-                              <option key={st.id} value={st.name}>{st.name} ({st.batchName})</option>
-                            ))}
-                          </select>
-                        </div>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700 mb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Campus Notifications & Announcements</h2>
+                    <p className="text-xs text-slate-500">Official circulars, exam alerts, and academic updates</p>
+                  </div>
+                  <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                    {notices.length} Active Circulars
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {notices.map(n => (
+                    <div key={n.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                        <Bell className="w-4 h-4" />
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="p-3 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-                          <span className="text-slate-500 text-[11px]">Attendance</span>
-                          <div className="text-xl font-bold font-mono text-emerald-600">{attRate}%</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{n.title}</h4>
+                          <span className="text-[11px] text-slate-400 font-mono">{(n as any).date || n.createdAt}</span>
                         </div>
-                        <div className="p-3 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-                          <span className="text-slate-500 text-[11px]">Fee balance</span>
-                          <div className="text-xl font-bold font-mono text-rose-600">₹{inr(bal)}</div>
-                        </div>
-                      </div>
-                      {bal > 0 && (
-                        <div className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-                          Fee payment due by 2026-11-05
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Published Exam Results */}
-                    <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f]">
-                      <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100 mb-2">Published results</h3>
-                      <div className="overflow-x-auto text-xs">
-                        <table className="w-full text-left">
-                          <thead>
-                            <tr className="border-b text-slate-400">
-                              <th className="py-1">Exam</th>
-                              <th className="py-1">Marks</th>
-                              <th className="py-1">Percent</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {testResults.filter(r => r.studentName === s.name).map(r => {
-                              const t = tests.find(test => test.id === r.testId);
-                              const pct = t ? Math.round((r.marksObtained / t.maxMarks) * 100) : 0;
-                              return (
-                                <tr key={r.id} className="border-b border-slate-100 dark:border-slate-800">
-                                  <td className="py-1 font-medium">{t?.title}</td>
-                                  <td className="py-1 font-mono">{r.marksObtained}/{t?.maxMarks}</td>
-                                  <td className="py-1 font-mono font-bold">{pct}%</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">{n.content}</p>
                       </div>
                     </div>
-
-                    {/* Upcoming schedule & announcements */}
-                    <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f] space-y-2">
-                      <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100">Announcements</h3>
-                      {notices.map(n => (
-                        <div key={n.id} className="text-xs p-2 rounded bg-slate-50 dark:bg-slate-900">
-                          <span className="font-semibold">{n.title}:</span> {n.content}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                );
-              })()}
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </main>

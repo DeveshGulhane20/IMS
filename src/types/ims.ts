@@ -1,4 +1,4 @@
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+export type Role = 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 

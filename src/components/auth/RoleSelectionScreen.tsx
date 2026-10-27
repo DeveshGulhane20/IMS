@@ -22,8 +22,8 @@ const roles: {
   icon: React.ElementType;
   color: string;
   bg: string;
-  titleKey: 'roleAdmin' | 'roleTeacher' | 'roleParent' | 'roleStudent' | 'roleSuperAdmin';
-  descKey: 'roleAdminDesc' | 'roleTeacherDesc' | 'roleParentDesc' | 'roleStudentDesc' | 'roleSuperAdminDesc';
+  titleKey: 'roleAdmin' | 'roleTeacher' | 'roleParent' | 'roleStudent';
+  descKey: 'roleAdminDesc' | 'roleTeacherDesc' | 'roleParentDesc' | 'roleStudentDesc';
 }[] = [
   {
     role: 'ADMIN',
@@ -56,14 +56,6 @@ const roles: {
     bg: 'bg-amber-50 border-amber-200 hover:border-amber-400 hover:bg-amber-100',
     titleKey: 'roleStudent',
     descKey: 'roleStudentDesc',
-  },
-  {
-    role: 'SUPER_ADMIN',
-    icon: Shield,
-    color: 'text-slate-700',
-    bg: 'bg-slate-50 border-slate-200 hover:border-slate-400 hover:bg-slate-100',
-    titleKey: 'roleSuperAdmin',
-    descKey: 'roleSuperAdminDesc',
   },
 ];
 

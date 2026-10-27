@@ -57,7 +57,7 @@ export const mockUsers: User[] = [
     id: 'u-superadmin',
     instituteId: 'inst-01',
     email: 'chancellor@tuitionpro.edu',
-    role: 'SUPER_ADMIN',
+    role: 'ADMIN',
     firstName: 'Dr. Arvind',
     lastName: 'Sharma',
     phone: '+91 98250 00002',

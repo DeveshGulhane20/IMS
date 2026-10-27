@@ -28,12 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange }) => 
 
   const getNavItems = () => {
     switch (role) {
-      case 'SUPER_ADMIN':
-        return [
-          { id: 'dashboard', label: 'Executive Overview', icon: LayoutDashboard },
-          { id: 'institutes', label: 'Branches & Campuses', icon: Building },
-          { id: 'audit-logs', label: 'System Audit Trail', icon: History }
-        ];
       case 'ADMIN':
         const unresolvedAlertCount = performanceAlerts.filter(a => !a.isResolved).length;
         return [

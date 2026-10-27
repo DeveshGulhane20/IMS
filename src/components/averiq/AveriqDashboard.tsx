@@ -35,6 +35,13 @@ import {
   Cell
 } from 'recharts';
 
+import {
+  academicMetrics,
+  academicEvents,
+  academicStudents,
+  academicTeachers
+} from '../../data/mockAcademicData';
+
 interface AveriqDashboardProps {
   onNavigateTab: (tabId: string) => void;
   onOpenModal: (type: 'student' | 'teacher' | 'attendance' | 'fee' | 'exam' | 'inquiry') => void;
@@ -82,96 +89,70 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
     { month: 'May', students: 96 }
   ];
 
-  // Fee collection Donut Chart Data
+  // Fee collection Donut Chart Data from dynamic dataset
   const feeDonutData = [
-    { name: 'Collected', value: 345230, percentage: 72, color: '#10B981' },
-    { name: 'Pending', value: 89450, percentage: 19, color: '#F59E0B' },
-    { name: 'Overdue', value: 42320, percentage: 9, color: '#EF4444' }
-  ];
-
-  // Upcoming Events data
-  const upcomingEvents = [
     {
-      id: 1,
-      title: 'Parent Teacher Meeting',
-      date: '28 May',
-      month: 'MAY',
-      day: '28',
-      time: '10:00 AM - 01:00 PM',
-      venue: 'Main Auditorium'
+      name: 'Collected',
+      value: academicMetrics.totalFeesCollected,
+      percentage: Math.round((academicMetrics.totalFeesCollected / academicMetrics.totalFeesBilled) * 100),
+      color: '#10B981'
     },
     {
-      id: 2,
-      title: 'Half Yearly Exam',
-      date: '30 May',
-      month: 'MAY',
-      day: '30',
-      time: '09:00 AM - 12:30 PM',
-      venue: 'Examination Halls 1-4'
+      name: 'Pending',
+      value: Math.round(academicMetrics.totalFeesPending * 0.7),
+      percentage: Math.round((academicMetrics.totalFeesPending * 0.7 / academicMetrics.totalFeesBilled) * 100),
+      color: '#F59E0B'
     },
     {
-      id: 3,
-      title: 'Fee Submission Deadline',
-      date: '02 June',
-      month: 'JUN',
-      day: '02',
-      time: 'Before 05:00 PM',
-      venue: 'Accounts & Online Portal'
-    },
-    {
-      id: 4,
-      title: 'Science Exhibition',
-      date: '05 June',
-      month: 'JUN',
-      day: '05',
-      time: '11:30 AM - 04:00 PM',
-      venue: 'Science Wing & Labs'
+      name: 'Overdue',
+      value: Math.round(academicMetrics.totalFeesPending * 0.3),
+      percentage: Math.round((academicMetrics.totalFeesPending * 0.3 / academicMetrics.totalFeesBilled) * 100),
+      color: '#EF4444'
     }
   ];
 
-  // Top Performing Students data
-  const topStudents = [
-    {
-      rank: 1,
-      name: 'Aarav Patel',
-      class: 'Class 10-A',
-      percentage: '98.4%',
-      initials: 'AP',
-      avatarBg: 'bg-blue-600'
-    },
-    {
-      rank: 2,
-      name: 'Diya Sharma',
-      class: 'Class 10-A',
-      percentage: '96.8%',
-      initials: 'DS',
-      avatarBg: 'bg-indigo-600'
-    },
-    {
-      rank: 3,
-      name: 'Rohan Gupta',
-      class: 'Class 9-B',
-      percentage: '95.2%',
-      initials: 'RG',
-      avatarBg: 'bg-emerald-600'
-    },
-    {
-      rank: 4,
-      name: 'Ananya Iyer',
-      class: 'Class 12-A',
-      percentage: '94.6%',
-      initials: 'AI',
-      avatarBg: 'bg-purple-600'
-    },
-    {
-      rank: 5,
-      name: 'Kabir Mehta',
-      class: 'Class 11-B',
-      percentage: '93.8%',
-      initials: 'KM',
-      avatarBg: 'bg-teal-600'
-    }
-  ];
+  // Upcoming Events data from dynamic dataset
+  const upcomingEvents = academicEvents
+    .filter(e => e.type === 'Upcoming')
+    .slice(0, 4)
+    .map((e, idx) => {
+      const dateParts = e.date.split('-');
+      const day = dateParts[2] || '15';
+      const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      const monthIdx = parseInt(dateParts[1], 10) - 1;
+      const month = monthNames[monthIdx] || 'NOV';
+
+      return {
+        id: idx + 1,
+        title: e.title,
+        date: `${day} ${month}`,
+        month,
+        day,
+        time: e.time,
+        venue: e.venue
+      };
+    });
+
+  // Top Performing Students data from dynamic dataset
+  const topStudents = [...academicStudents]
+    .sort((a, b) => {
+      const avgA = (a.semesters.sem1.percentage + a.semesters.sem2.percentage) / 2;
+      const avgB = (b.semesters.sem1.percentage + b.semesters.sem2.percentage) / 2;
+      return avgB - avgA;
+    })
+    .slice(0, 5)
+    .map((s, idx) => {
+      const avg = Math.round((s.semesters.sem1.percentage + s.semesters.sem2.percentage) / 2);
+      const colors = ['bg-blue-600', 'bg-indigo-600', 'bg-emerald-600', 'bg-purple-600', 'bg-teal-600'];
+      return {
+        rank: idx + 1,
+        name: s.name,
+        class: `${s.gradeLevel}-${s.section}`,
+        percentage: `${avg}%`,
+        initials: s.name.split(' ').map(n => n[0]).join(''),
+        avatarBg: colors[idx % colors.length]
+      };
+    });
 
   // Class-wise Attendance (Classes 6 to 12)
   const classAttendance = [
@@ -267,97 +248,109 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
       {/* 5. Summary Statistic Cards (4 cards in responsive row) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Students */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow">
+        <div
+          onClick={() => onNavigateTab('stu')}
+          className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
               Total Students
             </span>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Users className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums">
-              248
+              {academicMetrics.totalStudents}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
               <span className="inline-flex items-center text-emerald-600 font-semibold font-mono">
                 <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                +12.5%
+                50 Active Codes
               </span>
-              <span className="text-slate-500 dark:text-slate-400">vs last month</span>
+              <span className="text-slate-500 dark:text-slate-400">Class 8-10</span>
             </div>
           </div>
         </div>
 
         {/* Card 2: Total Teachers */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow">
+        <div
+          onClick={() => onNavigateTab('tea')}
+          className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
               Total Teachers
             </span>
-            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <GraduationCap className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums">
-              18
+              {academicMetrics.totalTeachers}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
               <span className="inline-flex items-center text-emerald-600 font-semibold font-mono">
                 <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                +2 new
+                4.85 ★ Avg
               </span>
-              <span className="text-slate-500 dark:text-slate-400">vs last month</span>
+              <span className="text-slate-500 dark:text-slate-400">Dept Heads</span>
             </div>
           </div>
         </div>
 
         {/* Card 3: Total Fees (Paid) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow">
+        <div
+          onClick={() => onNavigateTab('fee')}
+          className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
               Total Fees (Paid)
             </span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <span className="font-bold text-base">₹</span>
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums">
-              ₹3,45,230
+              ₹{academicMetrics.totalFeesCollected.toLocaleString('en-IN')}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
               <span className="inline-flex items-center text-emerald-600 font-semibold font-mono">
                 <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                +8.4%
+                {Math.round((academicMetrics.totalFeesCollected / academicMetrics.totalFeesBilled) * 100)}%
               </span>
-              <span className="text-slate-500 dark:text-slate-400">vs last month</span>
+              <span className="text-slate-500 dark:text-slate-400">Collection rate</span>
             </div>
           </div>
         </div>
 
         {/* Card 4: Pending Fees */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow">
+        <div
+          onClick={() => onNavigateTab('fee')}
+          className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
               Pending Fees
             </span>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Clock className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums">
-              ₹56,780
+              ₹{academicMetrics.totalFeesPending.toLocaleString('en-IN')}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
-              <span className="inline-flex items-center text-emerald-600 font-semibold font-mono">
+              <span className="inline-flex items-center text-amber-600 font-semibold font-mono">
                 <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />
-                -3.2%
+                Due 15 Nov
               </span>
-              <span className="text-slate-500 dark:text-slate-400">vs last month</span>
+              <span className="text-slate-500 dark:text-slate-400">50 Ledgers</span>
             </div>
           </div>
         </div>
