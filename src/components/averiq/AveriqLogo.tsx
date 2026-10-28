@@ -1,74 +1,71 @@
 import React from 'react';
 
+export const AVERIQ_LOGO_ASSET = '/assets/aistudio/Averiq_Intelligence_Logo_f607a30d.png';
+
 interface AveriqLogoProps {
   className?: string;
   showText?: boolean;
   textColor?: string;
   subtextColor?: string;
   tagline?: string;
+  appName?: string;
+  companyName?: string;
+  showAppName?: boolean;
+  showCompanyTagline?: boolean;
 }
 
 export const AveriqLogo: React.FC<AveriqLogoProps> = ({
-  className = 'w-8 h-8',
+  className = 'w-9 h-9',
   showText = true,
   textColor = 'text-white',
   subtextColor = 'text-blue-400',
-  tagline = 'Smart Education, Better Future'
+  tagline,
+  appName = 'IMS - Institution Management System',
+  companyName = 'AVERIQ',
+  showAppName = true,
+  showCompanyTagline = true
 }) => {
   return (
-    <div className="flex items-center gap-2.5">
-      {/* Averiq Signature Blue Ribbon / Origami Arrow Logo */}
-      <div className={`relative shrink-0 flex items-center justify-center ${className}`}>
-        <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-sm">
-          <defs>
-            <linearGradient id="averiqRibbon1" x1="10%" y1="100%" x2="90%" y2="0%">
-              <stop offset="0%" stopColor="#0056D6" />
-              <stop offset="60%" stopColor="#007BFF" />
-              <stop offset="100%" stopColor="#38BDF8" />
-            </linearGradient>
-            <linearGradient id="averiqRibbon2" x1="0%" y1="20%" x2="100%" y2="80%">
-              <stop offset="0%" stopColor="#0041B8" />
-              <stop offset="100%" stopColor="#0066FF" />
-            </linearGradient>
-            <linearGradient id="averiqFold" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#60A5FA" />
-              <stop offset="100%" stopColor="#0056D6" />
-            </linearGradient>
-          </defs>
-          {/* Main Left Arrow-Ribbon Wing */}
-          <path
-            d="M8 35L19.5 8L27 18L15 35H8Z"
-            fill="url(#averiqRibbon1)"
-          />
-          {/* Right Fold Ribbon Section */}
-          <path
-            d="M21 16L30 28L36 35H25.5L19 25.5L14 32H9.5L17.5 20.5L21 16Z"
-            fill="url(#averiqRibbon2)"
-          />
-          {/* Diagonal Ribbon Highlight Crest */}
-          <path
-            d="M19.5 8L27 18L21 21L15.5 13.5L19.5 8Z"
-            fill="url(#averiqFold)"
-          />
-          {/* Translucent Origami Shadow Detail */}
-          <path
-            d="M17.5 20.5L25.5 32H30.5L21 18.5L17.5 20.5Z"
-            fill="#0284C7"
-            fillOpacity="0.45"
-          />
-        </svg>
+    <div className="flex items-center gap-3 select-none">
+      {/* Official Averiq Logo Symbol Asset */}
+      <div className={`relative shrink-0 flex items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-white/20 overflow-hidden ${className}`}>
+        <img
+          src={AVERIQ_LOGO_ASSET}
+          alt="AVERIQ - Intelligence in every solution"
+          className="w-full h-full object-contain"
+        />
       </div>
 
       {showText && (
-        <div className="flex flex-col text-left">
-          <span className={`font-black text-xl tracking-tight leading-none ${textColor}`}>
-            Averiq
-          </span>
-          {tagline && (
-            <span className={`text-[10px] tracking-wide font-medium mt-0.5 ${subtextColor}`}>
-              {tagline}
+        <div className="flex flex-col text-left justify-center min-w-0">
+          {/* Company Brand & App Code Badge */}
+          <div className="flex items-center gap-1.5">
+            <span className={`font-black text-base sm:text-lg tracking-tight leading-none ${textColor}`}>
+              {companyName}
             </span>
-          )}
+            <span className="px-1.5 py-0.5 rounded-md bg-blue-600/25 border border-blue-400/40 text-blue-300 font-mono font-bold text-[10px] tracking-wider uppercase leading-none">
+              IMS
+            </span>
+          </div>
+
+          {/* Tagline / Subtitle */}
+          <div className="flex flex-col mt-0.5 leading-tight">
+            {tagline ? (
+              <span className={`text-[10px] font-semibold tracking-wide ${subtextColor}`}>
+                {tagline}
+              </span>
+            ) : showCompanyTagline ? (
+              <span className={`text-[10px] font-medium tracking-wide ${subtextColor}`}>
+                Intelligence in every solution
+              </span>
+            ) : null}
+
+            {showAppName && (
+              <span className="text-[9px] text-slate-400 font-medium tracking-tight truncate">
+                Institution Management System
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

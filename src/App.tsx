@@ -10,7 +10,7 @@ import { Role } from './types/ims';
 
 function AppContent() {
   const { setRole } = useIMS();
-  const [hasSelectedRole, setHasSelectedRole] = useState(true);
+  const [hasSelectedRole, setHasSelectedRole] = useState(false);
 
   const handleRoleSelect = (role: Role) => {
     setRole(role);
@@ -21,8 +21,18 @@ function AppContent() {
     setHasSelectedRole(false);
   };
 
+  const handleSkipToDashboard = () => {
+    setRole('ADMIN');
+    setHasSelectedRole(true);
+  };
+
   if (!hasSelectedRole) {
-    return <RoleSelectionScreen onSelectRole={handleRoleSelect} />;
+    return (
+      <RoleSelectionScreen
+        onSelectRole={handleRoleSelect}
+        onSkipToDashboard={handleSkipToDashboard}
+      />
+    );
   }
 
   return (

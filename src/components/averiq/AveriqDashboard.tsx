@@ -1010,15 +1010,19 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
       {/* 10. Footer Banner */}
       <div className="rounded-2xl p-5 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-950/30 dark:to-slate-900 border border-blue-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
-            <GraduationCap className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-2xl bg-white p-1 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center shrink-0 overflow-hidden">
+            <img
+              src="/assets/aistudio/Averiq_Intelligence_Logo_f607a30d.png"
+              alt="AVERIQ - Intelligence in every solution"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <div className="font-bold text-slate-900 dark:text-white text-sm">
-              Together we build a brighter future
+              IMS - Institution Management System
             </div>
             <div className="text-xs text-blue-700 dark:text-blue-400 font-medium">
-              Averiq - Smart School Management System
+              AVERIQ — Intelligence in every solution
             </div>
           </div>
         </div>

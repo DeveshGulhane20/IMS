@@ -13,9 +13,7 @@ import {
   AlertCircle,
   Calendar,
   X,
-  UserCheck,
-  GraduationCap,
-  Users
+  UserCheck
 } from 'lucide-react';
 import { useIMS } from '../../context/IMSContext';
 import { Role } from '../../types/ims';
@@ -34,7 +32,6 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
 }) => {
   const {
     role,
-    setRole,
     currentUser,
     isMobilePreviewOpen,
     setMobilePreviewOpen,
@@ -152,26 +149,42 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
     }
   ];
 
-  // Permitted roles (No Super Admin!)
-  const rolesList: { role: Role; label: string; desc: string }[] = [
-    { role: 'STUDENT', label: 'Student Portal', desc: 'Rohan Sharma (Class 10A)' },
-    { role: 'PARENT', label: 'Parent Portal', desc: 'Mr. & Mrs. Sharma' },
-    { role: 'ADMIN', label: 'Administrator', desc: 'School Admin' },
-    { role: 'TEACHER', label: 'Teacher Dashboard', desc: 'Prof. Rajesh Sir' }
-  ];
-
-  // Profile avatar and name per role
+  // Profile avatar, name, and email per role
   const getPersonaDetails = () => {
     if (role === 'STUDENT') {
-      return { initials: 'RS', name: 'Rohan Sharma', roleLabel: 'Class 10 | Science', color: 'from-blue-600 to-indigo-600' };
+      return {
+        initials: 'RS',
+        name: 'Rohan Sharma',
+        email: 'rohan.sharma@student.averiq.edu',
+        roleLabel: 'Class 10 | Science',
+        color: 'from-blue-600 to-indigo-600'
+      };
     }
     if (role === 'PARENT') {
-      return { initials: 'MS', name: 'Mr. & Mrs. Sharma', roleLabel: 'Parent Guardian', color: 'from-indigo-600 to-purple-600' };
+      return {
+        initials: 'MS',
+        name: 'Mr. & Mrs. Sharma',
+        email: 'sharma.parents@averiq.edu',
+        roleLabel: 'Parent Guardian',
+        color: 'from-indigo-600 to-purple-600'
+      };
     }
     if (role === 'TEACHER') {
-      return { initials: 'RS', name: 'Rajesh Sir', roleLabel: 'Maths Teacher', color: 'from-emerald-600 to-teal-600' };
+      return {
+        initials: 'RS',
+        name: 'Prof. Rajesh Sir',
+        email: 'rajesh.sir@faculty.averiq.edu',
+        roleLabel: 'Maths Teacher',
+        color: 'from-emerald-600 to-teal-600'
+      };
     }
-    return { initials: 'AD', name: 'Administrator', roleLabel: 'School Admin', color: 'from-blue-600 to-cyan-600' };
+    return {
+      initials: 'AD',
+      name: 'Administrator',
+      email: 'admin@averiq.edu',
+      roleLabel: 'School Admin',
+      color: 'from-blue-600 to-cyan-600'
+    };
   };
 
   const persona = getPersonaDetails();
@@ -190,7 +203,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
         </button>
 
         <AveriqLogo
-          className="w-7 h-7"
+          className="w-8 h-8 sm:w-9 sm:h-9"
           showText={true}
           textColor="text-white"
           subtextColor="text-blue-400"
@@ -199,7 +212,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
               ? 'Student Portal'
               : role === 'PARENT'
               ? 'Parent Portal'
-              : 'School Management'
+              : 'Intelligence in every solution'
           }
         />
       </div>
@@ -312,41 +325,6 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
 
       {/* Right Area: Portal Switcher, Fullscreen, Notifications, User Profile */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Interactive Dual Portal Switcher Tabs */}
-        <div className="flex items-center p-1 bg-[#071324] border border-slate-700/80 rounded-xl text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => {
-              setRole('STUDENT');
-              onNavigateTab('dash');
-            }}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
-              role === 'STUDENT'
-                ? 'bg-[#0056D6] text-white shadow-xs'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <GraduationCap className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Student Portal</span>
-            <span className="sm:hidden">Student</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setRole('PARENT');
-              onNavigateTab('dash');
-            }}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all ${
-              role === 'PARENT'
-                ? 'bg-[#0056D6] text-white shadow-xs'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Parent Portal</span>
-            <span className="sm:hidden">Parent</span>
-          </button>
-        </div>
 
         {/* Fullscreen Button */}
         <button
@@ -438,52 +416,31 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
 
           {/* Profile Dropdown Menu */}
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#0A192F] border border-slate-700 shadow-2xl p-2 z-50 text-xs">
+            <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#0A192F] border border-slate-700 shadow-2xl p-2 z-50 text-xs">
+              {/* User Identity Info */}
               <div className="p-3 border-b border-slate-800">
                 <div className="font-bold text-white text-sm">
                   {persona.name}
                 </div>
-                <div className="text-slate-400 text-[11px]">averiq.portal@school.edu</div>
-                <div className="inline-block mt-1 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold text-[10px]">
+                <div className="text-slate-400 text-[11px] truncate mt-0.5">
+                  {persona.email}
+                </div>
+                <div className="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold text-[10px]">
                   {persona.roleLabel}
                 </div>
               </div>
 
-              <div className="py-2 border-b border-slate-800">
-                <div className="px-3 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Switch Active Portal View
-                </div>
-                {rolesList.map(item => (
-                  <button
-                    key={item.role}
-                    type="button"
-                    onClick={() => {
-                      setRole(item.role);
-                      setIsProfileOpen(false);
-                      onNavigateTab('dash');
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${
-                      role === item.role
-                        ? 'bg-[#0056D6] text-white font-semibold'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    <span className="text-[10px] opacity-75">{item.desc}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="py-1">
+              {/* Utility Links */}
+              <div className="py-1.5 space-y-0.5">
                 <button
                   type="button"
                   onClick={() => {
                     setMobilePreviewOpen(!isMobilePreviewOpen);
                     setIsProfileOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition-colors"
                 >
-                  <Smartphone className="w-4 h-4 text-teal-400" />
+                  <Smartphone className="w-4 h-4 text-teal-400 shrink-0" />
                   <span>Mobile Screen Simulator</span>
                 </button>
                 <button
@@ -492,25 +449,29 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                     onNavigateTab('set');
                     setIsProfileOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition-colors"
                 >
-                  <Sliders className="w-4 h-4 text-purple-400" />
+                  <Sliders className="w-4 h-4 text-purple-400 shrink-0" />
                   <span>Portal Settings</span>
                 </button>
-                {onSwitchRole && (
+              </div>
+
+              {/* Clean Sign Out CTA */}
+              {onSwitchRole && (
+                <div className="pt-1.5 mt-1 border-t border-slate-800">
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileOpen(false);
                       onSwitchRole();
                     }}
-                    className="w-full text-left px-3 py-2 rounded-lg text-rose-400 hover:bg-rose-950/30 flex items-center gap-2 mt-1"
+                    className="w-full text-left px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center gap-2.5 transition-colors font-medium"
                   >
-                    <LogOut className="w-4 h-4" />
-                    <span>Role Selection Screen</span>
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Sign Out</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>

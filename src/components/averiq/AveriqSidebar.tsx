@@ -118,7 +118,7 @@ export const AveriqSidebar: React.FC<AveriqSidebarProps> = ({
       >
         <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar">
           {/* Logo Header Area with signature Averiq Blue Ribbon */}
-          <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800/80 bg-[#071324]">
+          <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80 bg-[#071324]">
             <AveriqLogo
               className="w-8 h-8"
               showText={true}
@@ -129,7 +129,7 @@ export const AveriqSidebar: React.FC<AveriqSidebarProps> = ({
                   ? 'Student Portal'
                   : effectiveRole === 'PARENT'
                   ? 'Parent Portal'
-                  : 'Smart Education, Better Future'
+                  : 'Intelligence in every solution'
               }
             />
 
@@ -242,12 +242,17 @@ export const AveriqSidebar: React.FC<AveriqSidebarProps> = ({
             </div>
           ) : (
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-center space-y-2">
-              <div className="w-8 h-8 mx-auto rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                <GraduationCap className="w-4 h-4" />
+              <div className="w-10 h-10 mx-auto rounded-xl bg-white p-1 border border-slate-700/60 shadow-xs flex items-center justify-center overflow-hidden">
+                <img
+                  src="/assets/aistudio/Averiq_Intelligence_Logo_f607a30d.png"
+                  alt="AVERIQ - Intelligence in every solution"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <div className="text-xs font-bold text-white">Averiq High School</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Smart School Management</div>
+                <div className="text-xs font-bold text-white tracking-wide">AVERIQ IMS</div>
+                <div className="text-[10px] text-blue-400 font-medium">Intelligence in every solution</div>
+                <div className="text-[9px] text-slate-400 mt-0.5">Institution Management System</div>
               </div>
               <button
                 type="button"
@@ -258,7 +263,7 @@ export const AveriqSidebar: React.FC<AveriqSidebarProps> = ({
                 <span>Need Help?</span>
               </button>
               <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
-                © 2026 Averiq. All rights reserved.
+                © 2026 AVERIQ. All rights reserved.
               </div>
             </div>
           )}
