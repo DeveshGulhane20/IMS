@@ -167,6 +167,7 @@ export interface AcademicEvent {
   targetAudience: string;
   attendeesCount: number;
   status: 'Completed' | 'Scheduled' | 'Registration Open';
+  coordinator?: string;
   description: string;
   highlights: string[];
 }

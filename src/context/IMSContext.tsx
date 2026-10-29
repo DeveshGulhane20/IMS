@@ -75,6 +75,9 @@ interface IMSContextType {
   setMobilePreviewOpen: (open: boolean) => void;
   toastMessage: string | null;
   showToast: (msg: string) => void;
+  isSidebarCollapsed: boolean;
+  setIsSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapse: () => void;
 
   // Data Collections
   institute: Institute;
@@ -181,6 +184,24 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('ims_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ims_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
   };
 
   // State Collections
@@ -773,6 +794,9 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setMobilePreviewOpen,
         toastMessage,
         showToast,
+        isSidebarCollapsed,
+        setIsSidebarCollapsed,
+        toggleSidebarCollapse,
 
         institute,
         users,

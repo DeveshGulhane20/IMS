@@ -20,7 +20,16 @@ import {
   FileCheck,
   Send,
   BookOpen,
-  ArrowRight
+  ArrowRight,
+  Plus,
+  X,
+  Bell,
+  AlertTriangle,
+  ShieldAlert,
+  Tag,
+  Filter,
+  MessageSquare,
+  Flame
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -47,11 +56,27 @@ interface AveriqDashboardProps {
   onOpenModal: (type: 'student' | 'teacher' | 'attendance' | 'fee' | 'exam' | 'inquiry') => void;
 }
 
+export interface StudentAtRisk {
+  id: string;
+  rollNo: string;
+  name: string;
+  class: string;
+  initials: string;
+  avatarBg: string;
+  attendanceRate: number; // e.g. 64.5% (< 75%)
+  pendingFeeAmount: number; // e.g. ₹14,500 Overdue
+  feeOverdueDays: number;
+  examAverage: number; // e.g. 44% (Low results)
+  failingSubjects: string[];
+  riskLevel: 'Critical' | 'High' | 'Moderate';
+  primaryReason: string;
+}
+
 export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
   onNavigateTab,
   onOpenModal
 }) => {
-  const { students, teachers, feePayments, tests } = useIMS();
+  const { students, teachers, feePayments, tests, showToast } = useIMS();
 
   // Dynamic Date and Time
   const [currentDateTime, setCurrentDateTime] = useState('');
@@ -76,18 +101,115 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Reporting period for enrollment chart
-  const [enrollmentPeriod, setEnrollmentPeriod] = useState<'6m' | '1y' | '3m'>('6m');
+  // 1. Daily Attendance (7-Day at a time) State & Dataset
+  const [attendanceClassFilter, setAttendanceClassFilter] = useState<string>('all');
 
-  // Enrollment bar chart data (December to May)
-  const enrollmentData = [
-    { month: 'Dec', students: 38 },
-    { month: 'Jan', students: 54 },
-    { month: 'Feb', students: 48 },
-    { month: 'Mar', students: 68 },
-    { month: 'Apr', students: 82 },
-    { month: 'May', students: 96 }
-  ];
+  const attendanceDataByClass: Record<
+    string,
+    { label: string; data: { day: string; fullDate: string; rate: number; present: number; total: number }[] }
+  > = {
+    all: {
+      label: 'Campus Overall (All Classes)',
+      data: [
+        { day: 'Mon', fullDate: '20 Oct', rate: 94, present: 47, total: 50 },
+        { day: 'Tue', fullDate: '21 Oct', rate: 96, present: 48, total: 50 },
+        { day: 'Wed', fullDate: '22 Oct', rate: 92, present: 46, total: 50 },
+        { day: 'Thu', fullDate: '23 Oct', rate: 98, present: 49, total: 50 },
+        { day: 'Fri', fullDate: '24 Oct', rate: 94, present: 47, total: 50 },
+        { day: 'Sat', fullDate: '25 Oct', rate: 88, present: 44, total: 50 },
+        { day: 'Sun', fullDate: '26 Oct', rate: 90, present: 45, total: 50 }
+      ]
+    },
+    '10a': {
+      label: 'Class 10-A (Science)',
+      data: [
+        { day: 'Mon', fullDate: '20 Oct', rate: 96, present: 24, total: 25 },
+        { day: 'Tue', fullDate: '21 Oct', rate: 100, present: 25, total: 25 },
+        { day: 'Wed', fullDate: '22 Oct', rate: 96, present: 24, total: 25 },
+        { day: 'Thu', fullDate: '23 Oct', rate: 100, present: 25, total: 25 },
+        { day: 'Fri', fullDate: '24 Oct', rate: 96, present: 24, total: 25 },
+        { day: 'Sat', fullDate: '25 Oct', rate: 92, present: 23, total: 25 },
+        { day: 'Sun', fullDate: '26 Oct', rate: 92, present: 23, total: 25 }
+      ]
+    },
+    '10b': {
+      label: 'Class 10-B (General)',
+      data: [
+        { day: 'Mon', fullDate: '20 Oct', rate: 92, present: 23, total: 25 },
+        { day: 'Tue', fullDate: '21 Oct', rate: 92, present: 23, total: 25 },
+        { day: 'Wed', fullDate: '22 Oct', rate: 88, present: 22, total: 25 },
+        { day: 'Thu', fullDate: '23 Oct', rate: 96, present: 24, total: 25 },
+        { day: 'Fri', fullDate: '24 Oct', rate: 92, present: 23, total: 25 },
+        { day: 'Sat', fullDate: '25 Oct', rate: 84, present: 21, total: 25 },
+        { day: 'Sun', fullDate: '26 Oct', rate: 88, present: 22, total: 25 }
+      ]
+    },
+    '9a': {
+      label: 'Class 9-A',
+      data: [
+        { day: 'Mon', fullDate: '20 Oct', rate: 90, present: 27, total: 30 },
+        { day: 'Tue', fullDate: '21 Oct', rate: 93, present: 28, total: 30 },
+        { day: 'Wed', fullDate: '22 Oct', rate: 87, present: 26, total: 30 },
+        { day: 'Thu', fullDate: '23 Oct', rate: 97, present: 29, total: 30 },
+        { day: 'Fri', fullDate: '24 Oct', rate: 90, present: 27, total: 30 },
+        { day: 'Sat', fullDate: '25 Oct', rate: 83, present: 25, total: 30 },
+        { day: 'Sun', fullDate: '26 Oct', rate: 87, present: 26, total: 30 }
+      ]
+    },
+    '9b': {
+      label: 'Class 9-B',
+      data: [
+        { day: 'Mon', fullDate: '20 Oct', rate: 86, present: 24, total: 28 },
+        { day: 'Tue', fullDate: '21 Oct', rate: 89, present: 25, total: 28 },
+        { day: 'Wed', fullDate: '22 Oct', rate: 86, present: 24, total: 28 },
+        { day: 'Thu', fullDate: '23 Oct', rate: 93, present: 26, total: 28 },
+        { day: 'Fri', fullDate: '24 Oct', rate: 86, present: 24, total: 28 },
+        { day: 'Sat', fullDate: '25 Oct', rate: 82, present: 23, total: 28 },
+        { day: 'Sun', fullDate: '26 Oct', rate: 86, present: 24, total: 28 }
+      ]
+    },
+    '8a': {
+      label: 'Class 8-A Foundation',
+      data: [
+        { day: 'Mon', fullDate: '20 Oct', rate: 95, present: 19, total: 20 },
+        { day: 'Tue', fullDate: '21 Oct', rate: 95, present: 19, total: 20 },
+        { day: 'Wed', fullDate: '22 Oct', rate: 90, present: 18, total: 20 },
+        { day: 'Thu', fullDate: '23 Oct', rate: 100, present: 20, total: 20 },
+        { day: 'Fri', fullDate: '24 Oct', rate: 95, present: 19, total: 20 },
+        { day: 'Sat', fullDate: '25 Oct', rate: 90, present: 18, total: 20 },
+        { day: 'Sun', fullDate: '26 Oct', rate: 90, present: 18, total: 20 }
+      ]
+    },
+    '11pcm': {
+      label: 'Class 11-PCM (Senior)',
+      data: [
+        { day: 'Mon', fullDate: '20 Oct', rate: 88, present: 22, total: 25 },
+        { day: 'Tue', fullDate: '21 Oct', rate: 92, present: 23, total: 25 },
+        { day: 'Wed', fullDate: '22 Oct', rate: 84, present: 21, total: 25 },
+        { day: 'Thu', fullDate: '23 Oct', rate: 96, present: 24, total: 25 },
+        { day: 'Fri', fullDate: '24 Oct', rate: 88, present: 22, total: 25 },
+        { day: 'Sat', fullDate: '25 Oct', rate: 84, present: 21, total: 25 },
+        { day: 'Sun', fullDate: '26 Oct', rate: 92, present: 23, total: 25 }
+      ]
+    },
+    '12pcb': {
+      label: 'Class 12-PCB (Senior)',
+      data: [
+        { day: 'Mon', fullDate: '20 Oct', rate: 95, present: 21, total: 22 },
+        { day: 'Tue', fullDate: '21 Oct', rate: 100, present: 22, total: 22 },
+        { day: 'Wed', fullDate: '22 Oct', rate: 91, present: 20, total: 22 },
+        { day: 'Thu', fullDate: '23 Oct', rate: 100, present: 22, total: 22 },
+        { day: 'Fri', fullDate: '24 Oct', rate: 95, present: 21, total: 22 },
+        { day: 'Sat', fullDate: '25 Oct', rate: 91, present: 20, total: 22 },
+        { day: 'Sun', fullDate: '26 Oct', rate: 95, present: 21, total: 22 }
+      ]
+    }
+  };
+
+  const currentAttendanceData = attendanceDataByClass[attendanceClassFilter] || attendanceDataByClass.all;
+  const currentAttendanceAvg = Math.round(
+    currentAttendanceData.data.reduce((acc, curr) => acc + curr.rate, 0) / currentAttendanceData.data.length
+  );
 
   // Fee collection Donut Chart Data from dynamic dataset
   const feeDonutData = [
@@ -111,27 +233,53 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
     }
   ];
 
-  // Upcoming Events data from dynamic dataset
-  const upcomingEvents = academicEvents
-    .filter(e => e.type === 'Upcoming')
-    .slice(0, 4)
-    .map((e, idx) => {
-      const dateParts = e.date.split('-');
-      const day = dateParts[2] || '15';
-      const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-      const monthIdx = parseInt(dateParts[1], 10) - 1;
-      const month = monthNames[monthIdx] || 'NOV';
-
-      return {
-        id: idx + 1,
-        title: e.title,
-        date: `${day} ${month}`,
-        month,
-        day,
-        time: e.time,
-        venue: e.venue
-      };
-    });
+  // 3. Upcoming Events State (Initialized with mock events, expandable via calendar double-click)
+  const [eventsList, setEventsList] = useState([
+    {
+      id: 'evt-init-1',
+      title: 'Class 10 Science Practical Mock Exam',
+      date: '28 MAY',
+      month: 'MAY',
+      day: '28',
+      time: '09:00 AM – 11:30 AM',
+      venue: 'Physics & Chemistry Lab 2',
+      type: 'Exam',
+      isCustom: false
+    },
+    {
+      id: 'evt-init-2',
+      title: 'Quarterly Parent-Teacher Advisory Council',
+      date: '30 MAY',
+      month: 'MAY',
+      day: '30',
+      time: '10:30 AM – 01:00 PM',
+      venue: 'Main Academic Auditorium',
+      type: 'Meeting',
+      isCustom: false
+    },
+    {
+      id: 'evt-init-3',
+      title: 'Inter-Batch Mathematics Olympiad Trials',
+      date: '02 JUN',
+      month: 'JUN',
+      day: '02',
+      time: '02:00 PM – 04:00 PM',
+      venue: 'Seminar Hall B',
+      type: 'Event',
+      isCustom: false
+    },
+    {
+      id: 'evt-init-4',
+      title: 'Fee Installment Clearence Reminder Deadline',
+      date: '05 JUN',
+      month: 'JUN',
+      day: '05',
+      time: '05:00 PM',
+      venue: 'Accounts & Finance Desk',
+      type: 'Reminder',
+      isCustom: false
+    }
+  ]);
 
   // Top Performing Students data from dynamic dataset
   const topStudents = [...academicStudents]
@@ -154,6 +302,91 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
       };
     });
 
+  // 2. "Students at Risk" Data (Evaluated on Attendance < 75%, Pending/Overdue Fees, Low Exam Results)
+  const [riskFilter, setRiskFilter] = useState<'All' | 'Critical' | 'High'>('All');
+  
+  const studentsAtRisk: StudentAtRisk[] = [
+    {
+      id: 'sar-1',
+      rollNo: '10B-18',
+      name: 'Kabir Mehta',
+      class: 'Class 10-B',
+      initials: 'KM',
+      avatarBg: 'bg-rose-600',
+      attendanceRate: 64.5,
+      pendingFeeAmount: 14500,
+      feeOverdueDays: 45,
+      examAverage: 44,
+      failingSubjects: ['Maths (36%)', 'Physics (42%)'],
+      riskLevel: 'Critical',
+      primaryReason: 'Chronic absenteeism (64.5%) + 2 Exam Failures + ₹14.5K Overdue'
+    },
+    {
+      id: 'sar-2',
+      rollNo: '10A-14',
+      name: 'Pooja Mehta',
+      class: 'Class 10-A',
+      initials: 'PM',
+      avatarBg: 'bg-amber-600',
+      attendanceRate: 68.0,
+      pendingFeeAmount: 9000,
+      feeOverdueDays: 30,
+      examAverage: 51,
+      failingSubjects: ['Chemistry (45%)'],
+      riskLevel: 'High',
+      primaryReason: 'Irregular attendance (68%) + Chemistry remediation required'
+    },
+    {
+      id: 'sar-3',
+      rollNo: '09B-09',
+      name: 'Aniket Roy',
+      class: 'Class 9-B',
+      initials: 'AR',
+      avatarBg: 'bg-rose-700',
+      attendanceRate: 59.2,
+      pendingFeeAmount: 16000,
+      feeOverdueDays: 60,
+      examAverage: 42,
+      failingSubjects: ['Science (38%)', 'Maths (40%)'],
+      riskLevel: 'Critical',
+      primaryReason: 'Severe attendance deficit (59.2%) + Unpaid Q2 Tuition + Failing STEM'
+    },
+    {
+      id: 'sar-4',
+      rollNo: '11P-07',
+      name: 'Simran Kaur',
+      class: 'Class 11-PCM',
+      initials: 'SK',
+      avatarBg: 'bg-orange-600',
+      attendanceRate: 71.4,
+      pendingFeeAmount: 8500,
+      feeOverdueDays: 20,
+      examAverage: 49,
+      failingSubjects: ['Calculus (44%)'],
+      riskLevel: 'High',
+      primaryReason: 'Below 75% attendance threshold + Borderline Math score'
+    },
+    {
+      id: 'sar-5',
+      rollNo: '10B-22',
+      name: 'Sameer Khan',
+      class: 'Class 10-B',
+      initials: 'SK',
+      avatarBg: 'bg-amber-700',
+      attendanceRate: 73.0,
+      pendingFeeAmount: 12000,
+      feeOverdueDays: 40,
+      examAverage: 53,
+      failingSubjects: ['Physics (48%)'],
+      riskLevel: 'Moderate',
+      primaryReason: 'Overdue fee balance + Attendance watch alert'
+    }
+  ];
+
+  const filteredStudentsAtRisk = riskFilter === 'All'
+    ? studentsAtRisk
+    : studentsAtRisk.filter(s => s.riskLevel === riskFilter);
+
   // Class-wise Attendance (Classes 6 to 12)
   const classAttendance = [
     { class: 'Class 6', rate: 94 },
@@ -165,13 +398,30 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
     { class: 'Class 12', rate: 92 }
   ];
 
-  // Calendar State
+  // 3. Calendar State & Double-Click Modal Handling
   const [calendarMonth, setCalendarMonth] = useState('May 2026');
   const [selectedDay, setSelectedDay] = useState(26);
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+  const [modalDate, setModalDate] = useState<number>(26);
+
+  const [calendarForm, setCalendarForm] = useState<{
+    title: string;
+    type: 'Event' | 'Note' | 'Reminder' | 'Exam' | 'Meeting';
+    time: string;
+    venue: string;
+    description: string;
+  }>({
+    title: '',
+    type: 'Event',
+    time: '10:00 AM – 11:30 AM',
+    venue: 'Academic Hall 101',
+    description: ''
+  });
 
   const daysOfWeek = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+
   // May 2026 starts on Friday (index 4 for Mo=0)
-  const calendarDays = [
+  const [calendarDaysList, setCalendarDaysList] = useState<{ day: number | null; isToday?: boolean; hasEvent?: boolean }[]>([
     { day: null },
     { day: null },
     { day: null },
@@ -207,7 +457,57 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
     { day: 29 },
     { day: 30, hasEvent: true },
     { day: 31 }
-  ];
+  ]);
+
+  // Double Click Handler on Calendar Date
+  const handleDateDoubleClick = (dayNum: number) => {
+    setSelectedDay(dayNum);
+    setModalDate(dayNum);
+    setCalendarForm({
+      title: '',
+      type: 'Event',
+      time: '10:00 AM – 11:30 AM',
+      venue: 'Main Academic Hall',
+      description: ''
+    });
+    setIsCalendarModalOpen(true);
+  };
+
+  // Submit Handler for Calendar Item
+  const handleSaveCalendarItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!calendarForm.title.trim()) {
+      showToast('Please enter an event or reminder title');
+      return;
+    }
+
+    const monthName = calendarMonth.split(' ')[0];
+    const monthAbbr = monthName.slice(0, 3).toUpperCase();
+    const formattedDay = modalDate.toString().padStart(2, '0');
+
+    const newItem = {
+      id: `custom-event-${Date.now()}`,
+      title: calendarForm.title.trim(),
+      date: `${formattedDay} ${monthAbbr}`,
+      month: monthAbbr,
+      day: formattedDay,
+      time: calendarForm.time.trim() || 'All Day',
+      venue: calendarForm.venue.trim() || 'Campus Center',
+      type: calendarForm.type,
+      isCustom: true
+    };
+
+    // Prepend to Upcoming Events
+    setEventsList(prev => [newItem, ...prev]);
+
+    // Mark event dot on calendar
+    setCalendarDaysList(prev =>
+      prev.map(item => (item.day === modalDate ? { ...item, hasEvent: true } : item))
+    );
+
+    setIsCalendarModalOpen(false);
+    showToast(`🎉 Scheduled "${newItem.title}" on ${monthName} ${modalDate}! Reflected in Upcoming Events.`);
+  };
 
   // Indian Rupee Formatter
   const inr = (val: number) => val.toLocaleString('en-IN');
@@ -231,7 +531,7 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
               </h1>
             </div>
             <p className="text-blue-100 text-xs sm:text-sm max-w-xl">
-              Here's what's happening at your school today.
+              Ready for a great day? Here is your campus overview
             </p>
           </div>
 
@@ -362,39 +662,56 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
         <div className="lg:col-span-8 space-y-6">
           {/* 6. Analytics Section (2 side-by-side cards) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Student Enrollment Bar Chart */}
+            {/* Daily Attendance 7-Day Bar Graph */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Student Enrollment
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Daily Attendance (7-Day Trend)
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                      Avg: {currentAttendanceAvg}%
+                    </span>
+                  </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Monthly admissions & registrations
+                    {currentAttendanceData.label} · Daily Turnout
                   </p>
                 </div>
-                <select
-                  value={enrollmentPeriod}
-                  onChange={e => setEnrollmentPeriod(e.target.value as any)}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none"
-                >
-                  <option value="6m">Last 6 Months</option>
-                  <option value="1y">Academic Year</option>
-                  <option value="3m">Last 3 Months</option>
-                </select>
+
+                {/* Class-wise Filter Dropdown */}
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={attendanceClassFilter}
+                    onChange={e => setAttendanceClassFilter(e.target.value)}
+                    className="text-xs px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                  >
+                    <option value="all">Overall Campus (All)</option>
+                    <option value="10a">Class 10-A (Science)</option>
+                    <option value="10b">Class 10-B (General)</option>
+                    <option value="9a">Class 9-A</option>
+                    <option value="9b">Class 9-B</option>
+                    <option value="8a">Class 8-A Foundation</option>
+                    <option value="11pcm">Class 11-PCM (Senior)</option>
+                    <option value="12pcb">Class 12-PCB (Senior)</option>
+                  </select>
+                </div>
               </div>
 
+              {/* 7-Day Bar Graph */}
               <div className="h-56 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={enrollmentData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <BarChart data={currentAttendanceData.data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.6} />
                     <XAxis
-                      dataKey="month"
+                      dataKey="day"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#64748B', fontSize: 11 }}
+                      tick={{ fill: '#64748B', fontSize: 11, fontWeight: 600 }}
                     />
                     <YAxis
+                      domain={[0, 100]}
+                      unit="%"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#64748B', fontSize: 11 }}
@@ -408,16 +725,56 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
                         color: '#FFFFFF',
                         fontSize: '12px'
                       }}
-                      formatter={(val: number) => [`${val} Students`, 'Admissions']}
+                      formatter={(val: number, _name: string, props: any) => [
+                        `${val}% (${props.payload.present}/${props.payload.total} Present)`,
+                        'Attendance'
+                      ]}
+                      labelFormatter={(label: string, payload: any[]) => {
+                        if (payload && payload[0]) {
+                          return `${label} (${payload[0].payload.fullDate})`;
+                        }
+                        return label;
+                      }}
                     />
                     <Bar
-                      dataKey="students"
-                      fill="#3B82F6"
+                      dataKey="rate"
                       radius={[6, 6, 0, 0]}
-                      barSize={28}
-                    />
+                      barSize={26}
+                    >
+                      {currentAttendanceData.data.map((entry, index) => (
+                        <Cell
+                          key={`att-cell-${index}`}
+                          fill={entry.rate >= 95 ? '#10B981' : entry.rate >= 88 ? '#3B82F6' : '#F59E0B'}
+                        />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+
+              {/* 7-Day Performance Micro-Indicators */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1 font-mono">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>≥95% High</span>
+                  </span>
+                  <span className="flex items-center gap-1 font-mono">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span>88–94% Target</span>
+                  </span>
+                  <span className="flex items-center gap-1 font-mono">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span>&lt;88% Watch</span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('att')}
+                  className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Full Roll Call →
+                </button>
               </div>
             </div>
 
@@ -518,116 +875,303 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
             </div>
           </div>
 
-          {/* 7. Events and Top-Performing Students (2-column section) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Upcoming Events */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-3.5">
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Upcoming Events
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('tb')}
-                  className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1"
-                >
-                  <span>View Calendar</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+          {/* 7. Upcoming Events Card (Real-time reactive to calendar double-click additions) */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Upcoming Events &amp; Schedule
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                    {eventsList.length} Scheduled
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Institutional exams, meetings, reminders &amp; campus activities · Double-click any calendar date to schedule
+                </p>
               </div>
 
-              <div className="space-y-2.5">
-                {upcomingEvents.map(evt => (
-                  <div
-                    key={evt.id}
-                    className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors flex items-center justify-between gap-3 group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Date Badge */}
-                      <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 flex flex-col items-center justify-center text-center shrink-0">
-                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
-                          {evt.month}
-                        </span>
-                        <span className="text-sm font-extrabold text-slate-900 dark:text-white font-mono leading-none">
-                          {evt.day}
-                        </span>
-                      </div>
-
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {evt.title}
-                        </h4>
-                        <div className="text-[11px] text-slate-500 mt-0.5 truncate">
-                          {evt.time} · {evt.venue}
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab('tb')}
-                      className="p-1.5 rounded-lg text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50 dark:group-hover:bg-slate-800 transition-colors"
-                      title="View Details"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDateDoubleClick(selectedDay)}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+                  title="Double-click any calendar date or click here to add"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Event / Reminder</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('evt')}
+                  className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1 px-2 py-1"
+                >
+                  <span>All Events</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
 
-            {/* Top Performing Students */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-3.5">
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Top Performing Students
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('stu')}
-                  className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1"
-                >
-                  <span>View All</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {eventsList.slice(0, 4).map(evt => {
+                const typeColors: Record<string, { bg: string; text: string; border: string }> = {
+                  Exam: { bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-700 dark:text-purple-300', border: 'border-purple-200 dark:border-purple-800/60' },
+                  Meeting: { bg: 'bg-blue-50 dark:bg-blue-950/40', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800/60' },
+                  Reminder: { bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800/60' },
+                  Note: { bg: 'bg-slate-100 dark:bg-slate-800', text: 'text-slate-700 dark:text-slate-300', border: 'border-slate-300 dark:border-slate-700' },
+                  Event: { bg: 'bg-emerald-50 dark:bg-emerald-950/40', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-800/60' }
+                };
+                const tc = typeColors[evt.type] || typeColors.Event;
+
+                return (
+                  <div
+                    key={evt.id}
+                    className="p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-all flex items-start gap-3 group relative shadow-2xs"
+                  >
+                    {/* Date Badge */}
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-b from-blue-50 to-indigo-50 dark:from-blue-950/60 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-900/60 flex flex-col items-center justify-center text-center shrink-0">
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+                        {evt.month}
+                      </span>
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white font-mono leading-none">
+                        {evt.day}
+                      </span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${tc.bg} ${tc.text} ${tc.border}`}>
+                          {evt.type}
+                        </span>
+                        {(evt as any).isCustom && (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                            New
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate mt-1">
+                        {evt.title}
+                      </h4>
+                      <div className="text-[11px] text-slate-500 mt-0.5 truncate flex items-center gap-1.5">
+                        <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{evt.time}</span>
+                        <span className="text-slate-300 dark:text-slate-700">•</span>
+                        <span>{evt.venue}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 8. Side-by-Side Companion Cards: Top Performing Students vs Students at Risk */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Card: Top Performing Students */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                        Top Performing Students
+                      </h2>
+                      <p className="text-[10px] text-slate-500">Cohort Academic Stars</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('stu')}
+                    className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1"
+                  >
+                    <span>View All</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold">
+                        <th className="py-2 pl-1 w-8">#</th>
+                        <th className="py-2">Student</th>
+                        <th className="py-2">Class</th>
+                        <th className="py-2 text-right pr-1">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                      {topStudents.map(student => (
+                        <tr key={student.rank} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                          <td className="py-2 pl-1 font-mono font-bold text-slate-500">
+                            #{student.rank}
+                          </td>
+                          <td className="py-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-6 h-6 rounded-full ${student.avatarBg} text-white font-bold text-[10px] flex items-center justify-center shrink-0`}>
+                                {student.initials}
+                              </div>
+                              <span className="font-semibold text-slate-900 dark:text-white truncate">
+                                {student.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2 text-slate-500 text-[11px]">{student.class}</td>
+                          <td className="py-2 text-right pr-1">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold font-mono text-[11px] border border-emerald-200 dark:border-emerald-800/60">
+                              {student.percentage}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold">
-                      <th className="py-2 pl-1 w-10">Rank</th>
-                      <th className="py-2">Student</th>
-                      <th className="py-2">Class</th>
-                      <th className="py-2 text-right pr-1">Score</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    {topStudents.map(student => (
-                      <tr key={student.rank} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
-                        <td className="py-2.5 pl-1 font-mono font-bold text-slate-500">
-                          #{student.rank}
-                        </td>
-                        <td className="py-2.5">
-                          <div className="flex items-center gap-2">
+              <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Evaluated across 50 Active Students</span>
+                <span className="text-emerald-600 font-semibold">100% Pass Consistency</span>
+              </div>
+            </div>
+
+            {/* Right Card: Students at Risk Companion Card (Multi-Parameter Analysis) */}
+            <div className="bg-white dark:bg-slate-900 border border-rose-200/80 dark:border-rose-950/60 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center">
+                      <ShieldAlert className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Students at Risk
+                        </h2>
+                        <span className="px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-[10px] font-bold font-mono">
+                          {filteredStudentsAtRisk.length} Alert
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        Multi-Factor: Attendance &lt;75% · Dues · Low Marks
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Risk Filter Buttons */}
+                  <div className="flex items-center gap-1 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setRiskFilter('All')}
+                      className={`px-2 py-0.5 rounded-md font-semibold transition-colors ${
+                        riskFilter === 'All'
+                          ? 'bg-rose-600 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRiskFilter('Critical')}
+                      className={`px-2 py-0.5 rounded-md font-semibold transition-colors ${
+                        riskFilter === 'Critical'
+                          ? 'bg-rose-600 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      Critical
+                    </button>
+                  </div>
+                </div>
+
+                {/* Risk Students List */}
+                <div className="space-y-2.5">
+                  {filteredStudentsAtRisk.slice(0, 4).map(student => {
+                    const isCritical = student.riskLevel === 'Critical';
+
+                    return (
+                      <div
+                        key={student.id}
+                        className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <div className={`w-6 h-6 rounded-full ${student.avatarBg} text-white font-bold text-[10px] flex items-center justify-center shrink-0`}>
                               {student.initials}
                             </div>
-                            <span className="font-semibold text-slate-900 dark:text-white">
-                              {student.name}
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                {student.name}
+                              </h4>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {student.class} ({student.rollNo})
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider font-mono ${
+                                isCritical
+                                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-900'
+                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-900'
+                              }`}
+                            >
+                              {student.riskLevel}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                showToast(`🚨 Intervention notice sent to ${student.name}'s parents via SMS & WhatsApp.`);
+                              }}
+                              className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 text-[10px] font-bold transition-colors"
+                              title="Send Parent Alert"
+                            >
+                              Intervene
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Multi-parameter 3-factor diagnostic row */}
+                        <div className="grid grid-cols-3 gap-1 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px]">
+                          <div>
+                            <span className="text-slate-400 block text-[9px]">Attendance:</span>
+                            <span className="font-bold font-mono text-rose-600 dark:text-rose-400">
+                              {student.attendanceRate}% (&lt;75%)
                             </span>
                           </div>
-                        </td>
-                        <td className="py-2.5 text-slate-500">{student.class}</td>
-                        <td className="py-2.5 text-right pr-1">
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold font-mono text-[11px] border border-emerald-200 dark:border-emerald-800/60">
-                            {student.percentage}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div>
+                            <span className="text-slate-400 block text-[9px]">Pending Dues:</span>
+                            <span className="font-bold font-mono text-amber-600 dark:text-amber-400">
+                              ₹{student.pendingFeeAmount.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-slate-400 block text-[9px]">Exam Avg:</span>
+                            <span className="font-bold font-mono text-purple-600 dark:text-purple-400">
+                              {student.examAverage}% (Low)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Automatic Remediation Engine</span>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab('att')}
+                  className="font-semibold text-rose-600 dark:text-rose-400 hover:underline"
+                >
+                  Risk Roster Details →
+                </button>
               </div>
             </div>
           </div>
@@ -961,9 +1505,9 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
               ))}
             </div>
 
-            {/* Calendar Days Grid */}
+            {/* Calendar Days Grid with Double-Click Support */}
             <div className="grid grid-cols-7 gap-1 text-center text-xs">
-              {calendarDays.map((c, i) => {
+              {calendarDaysList.map((c, i) => {
                 if (!c.day) {
                   return <div key={`empty-${i}`} className="h-7" />;
                 }
@@ -976,62 +1520,211 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
                     key={c.day}
                     type="button"
                     onClick={() => setSelectedDay(c.day!)}
-                    className={`h-7 w-7 mx-auto rounded-lg text-xs font-mono font-medium relative flex items-center justify-center transition-colors ${
+                    onDoubleClick={() => handleDateDoubleClick(c.day!)}
+                    title={`Double-click to add Event, Note, Reminder, Exam, or Meeting on ${calendarMonth.split(' ')[0]} ${c.day}`}
+                    className={`h-7 w-7 mx-auto rounded-lg text-xs font-mono font-medium relative flex items-center justify-center transition-all cursor-pointer group ${
                       isSelected
-                        ? 'bg-blue-600 text-white font-bold shadow-xs'
+                        ? 'bg-blue-600 text-white font-bold shadow-xs scale-105'
                         : isToday
                         ? 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300 font-bold'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 hover:text-blue-600'
                     }`}
                   >
                     <span>{c.day}</span>
                     {c.hasEvent && !isSelected && (
-                      <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-amber-500" />
+                      <span className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                     )}
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                <span>Today (26th)</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span>Exam / Meeting</span>
-              </span>
+            {/* Calendar Hints & Legend */}
+            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  <span>Selected ({selectedDay}th)</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span>Active Event</span>
+                </span>
+              </div>
+              <div className="pt-1 flex items-center justify-between">
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                  💡 Double-click any date to add
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDateDoubleClick(selectedDay)}
+                  className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>New Entry</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 10. Footer Banner */}
-      <div className="rounded-2xl p-5 bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-950/30 dark:to-slate-900 border border-blue-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-white p-1 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center shrink-0 overflow-hidden">
-            <img
-              src="/assets/aistudio/Averiq_Intelligence_Logo_f607a30d.png"
-              alt="AVERIQ - Intelligence in every solution"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <div>
-            <div className="font-bold text-slate-900 dark:text-white text-sm">
-              IMS - Institution Management System
-            </div>
-            <div className="text-xs text-blue-700 dark:text-blue-400 font-medium">
-              AVERIQ — Intelligence in every solution
-            </div>
-          </div>
+      {/* 10. Footer Status */}
+      <div className="rounded-2xl p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Academic Session 2025–2026 · Real-time Portal Active</span>
         </div>
-
-        <div className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-right">
-          <span>Empowering academic excellence everyday · </span>
-          <span className="font-semibold text-slate-700 dark:text-slate-300">Trusted by 500+ Institutions</span>
+        <div className="text-slate-400 dark:text-slate-500 text-[11px]">
+          All academic, risk analysis, and administrative modules synced
         </div>
       </div>
+
+      {/* 11. Interactive Calendar Date Modal (Opened via double-click on any date or "+ Add" button) */}
+      {isCalendarModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <CalendarIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Schedule for {calendarMonth.split(' ')[0]} {modalDate}, 2026
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Add custom Event, Note, Reminder, Exam, or Meeting to upcoming events
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCalendarModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveCalendarItem} className="p-6 space-y-4">
+              {/* Type Selector (Event, Note, Reminder, Exam, Meeting) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Entry Category
+                </label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {(['Event', 'Note', 'Reminder', 'Exam', 'Meeting'] as const).map(type => {
+                    const isSelected = calendarForm.type === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setCalendarForm(prev => ({ ...prev, type }))}
+                        className={`py-2 px-1 text-center rounded-xl text-xs font-semibold border transition-all ${
+                          isSelected
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Title / Subject *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={
+                    calendarForm.type === 'Exam'
+                      ? 'e.g., Class 10 Chemistry Pre-Board Mock'
+                      : calendarForm.type === 'Meeting'
+                      ? 'e.g., Senior Faculty Review & Curriculum Sync'
+                      : calendarForm.type === 'Reminder'
+                      ? 'e.g., Submit Term 2 Attendance Ledgers'
+                      : calendarForm.type === 'Note'
+                      ? 'e.g., Campus Maintenance Window'
+                      : 'e.g., Annual Science Exhibition & Tech Showcase'
+                  }
+                  value={calendarForm.title}
+                  onChange={e => setCalendarForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Time and Venue Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Time / Duration
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 10:00 AM – 11:30 AM"
+                    value={calendarForm.time}
+                    onChange={e => setCalendarForm(prev => ({ ...prev, time: e.target.value }))}
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Venue / Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Hall 101 / Science Lab"
+                    value={calendarForm.venue}
+                    onChange={e => setCalendarForm(prev => ({ ...prev, venue: e.target.value }))}
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Description / Instructions */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Description &amp; Action Notes (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Enter details, syllabus chapters, attendees, or instructions..."
+                  value={calendarForm.description}
+                  onChange={e => setCalendarForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              {/* Form Action Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCalendarModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Save to Schedule</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

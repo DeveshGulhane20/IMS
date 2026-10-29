@@ -1,6 +1,8 @@
 import React from 'react';
 
-export const AVERIQ_LOGO_ASSET = '/assets/aistudio/Averiq_Intelligence_Logo_f607a30d.png';
+export const AV_ACHIEVERS_LOGO = '/assets/aistudio/WhatsApp_Image_2026-10-28_at_9.50.44_PM__1__a1189775.jpeg';
+export const IMS_GRAD_LOGO = '/assets/aistudio/image_22534877.png';
+export const AVERIQ_LOGO = '/assets/aistudio/Averiq_Intelligence_Logo_f607a30d.png';
 
 interface AveriqLogoProps {
   className?: string;
@@ -8,63 +10,59 @@ interface AveriqLogoProps {
   textColor?: string;
   subtextColor?: string;
   tagline?: string;
-  appName?: string;
-  companyName?: string;
-  showAppName?: boolean;
-  showCompanyTagline?: boolean;
+  collapsed?: boolean;
+  variant?: 'institute' | 'ims' | 'compact';
 }
 
 export const AveriqLogo: React.FC<AveriqLogoProps> = ({
-  className = 'w-9 h-9',
+  className = 'w-10 h-10',
   showText = true,
   textColor = 'text-white',
-  subtextColor = 'text-blue-400',
+  subtextColor = 'text-sky-300',
   tagline,
-  appName = 'IMS - Institution Management System',
-  companyName = 'AVERIQ',
-  showAppName = true,
-  showCompanyTagline = true
+  collapsed = false,
+  variant = 'institute'
 }) => {
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center justify-center select-none" title="AV Achievers - Institute Management System">
+        <div className={`relative shrink-0 flex items-center justify-center rounded-xl bg-white p-1 shadow-md ring-1 ring-white/20 overflow-hidden ${className}`}>
+          <img
+            src={AV_ACHIEVERS_LOGO}
+            alt="AV Achievers"
+            className="w-full h-full object-contain"
+          />
+        </div>
+        <span className="text-[9px] font-mono font-black text-blue-400 mt-1 uppercase tracking-wider">
+          IMS
+        </span>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-3 select-none">
-      {/* Official Averiq Logo Symbol Asset */}
-      <div className={`relative shrink-0 flex items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-white/20 overflow-hidden ${className}`}>
+    <div className="flex items-center gap-3 select-none min-w-0">
+      {/* Official AV Achievers Institute Logo Badge */}
+      <div className={`relative shrink-0 flex items-center justify-center rounded-xl bg-white p-1 shadow-md ring-1 ring-white/20 overflow-hidden ${className}`}>
         <img
-          src={AVERIQ_LOGO_ASSET}
-          alt="AVERIQ - Intelligence in every solution"
+          src={AV_ACHIEVERS_LOGO}
+          alt="AV Achievers Logo"
           className="w-full h-full object-contain"
         />
       </div>
 
       {showText && (
-        <div className="flex flex-col text-left justify-center min-w-0">
-          {/* Company Brand & App Code Badge */}
-          <div className="flex items-center gap-1.5">
-            <span className={`font-black text-base sm:text-lg tracking-tight leading-none ${textColor}`}>
-              {companyName}
-            </span>
-            <span className="px-1.5 py-0.5 rounded-md bg-blue-600/25 border border-blue-400/40 text-blue-300 font-mono font-bold text-[10px] tracking-wider uppercase leading-none">
-              IMS
+        <div className="flex flex-col text-left justify-center min-w-0 leading-tight">
+          {/* Primary Institute Brand Name */}
+          <div className="flex items-center gap-1.5 leading-none">
+            <span className={`font-black text-base sm:text-[17px] tracking-tight ${textColor}`}>
+              AV <span className="text-[#F97316]">ACHIEVERS</span>
             </span>
           </div>
 
-          {/* Tagline / Subtitle */}
-          <div className="flex flex-col mt-0.5 leading-tight">
-            {tagline ? (
-              <span className={`text-[10px] font-semibold tracking-wide ${subtextColor}`}>
-                {tagline}
-              </span>
-            ) : showCompanyTagline ? (
-              <span className={`text-[10px] font-medium tracking-wide ${subtextColor}`}>
-                Intelligence in every solution
-              </span>
-            ) : null}
-
-            {showAppName && (
-              <span className="text-[9px] text-slate-400 font-medium tracking-tight truncate">
-                Institution Management System
-              </span>
-            )}
+          {/* Subtitle Text: "INSTITUTE MANAGEMENT SYSTEM" in a single clean line */}
+          <div className={`text-[9.5px] sm:text-[10px] font-bold tracking-wider uppercase mt-1 whitespace-nowrap leading-tight ${subtextColor}`}>
+            INSTITUTE MANAGEMENT SYSTEM
           </div>
         </div>
       )}

@@ -13,11 +13,12 @@ import {
   AlertCircle,
   Calendar,
   X,
-  UserCheck
+  UserCheck,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { useIMS } from '../../context/IMSContext';
 import { Role } from '../../types/ims';
-import { AveriqLogo } from './AveriqLogo';
 
 interface AveriqTopNavProps {
   onToggleMobileSidebar: () => void;
@@ -35,6 +36,8 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
     currentUser,
     isMobilePreviewOpen,
     setMobilePreviewOpen,
+    isSidebarCollapsed,
+    toggleSidebarCollapse,
     students,
     teachers,
     inquiries
@@ -190,35 +193,37 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
   const persona = getPersonaDetails();
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-[#0A192F] border-b border-[#1E293B]/70 px-4 lg:px-8 flex items-center justify-between gap-3 text-white">
-      {/* Left Area: Mobile Menu Trigger + Averiq Brand */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 h-16 bg-[#0A192F] border-b border-[#1E293B]/70 px-4 lg:px-6 flex items-center justify-between gap-3 text-white">
+      {/* Left Area: Mobile Drawer Trigger + Desktop External Sidebar Toggle Button */}
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Mobile menu trigger */}
         <button
           type="button"
           onClick={onToggleMobileSidebar}
-          className="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 focus:outline-none"
+          className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/90 focus:outline-none"
           aria-label="Toggle navigation menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <AveriqLogo
-          className="w-8 h-8 sm:w-9 sm:h-9"
-          showText={true}
-          textColor="text-white"
-          subtextColor="text-blue-400"
-          tagline={
-            role === 'STUDENT'
-              ? 'Student Portal'
-              : role === 'PARENT'
-              ? 'Parent Portal'
-              : 'Intelligence in every solution'
-          }
-        />
+        {/* Desktop External Sidebar Collapse/Expand Toggle Button - Cleanly positioned next to the search bar */}
+        <button
+          type="button"
+          onClick={toggleSidebarCollapse}
+          className="hidden lg:flex items-center justify-center p-2 rounded-xl text-slate-300 hover:text-white bg-[#071324] hover:bg-slate-800/90 border border-slate-700/80 hover:border-blue-500/50 shadow-xs transition-all active:scale-95 group shrink-0"
+          title={isSidebarCollapsed ? "Expand Navigation Sidebar" : "Collapse Navigation Sidebar"}
+          aria-label="Toggle navigation sidebar"
+        >
+          {isSidebarCollapsed ? (
+            <PanelLeftOpen className="w-5 h-5 text-blue-400 group-hover:text-blue-300 transition-colors" />
+          ) : (
+            <PanelLeftClose className="w-5 h-5 text-slate-300 group-hover:text-white transition-colors" />
+          )}
+        </button>
       </div>
 
       {/* Center Area: Global Search Input */}
-      <div ref={searchRef} className="relative flex-1 max-w-sm lg:max-w-md mx-2 sm:mx-4 hidden sm:block">
+      <div ref={searchRef} className="relative flex-1 max-w-sm lg:max-w-md mx-2 sm:mx-3 hidden sm:block">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input

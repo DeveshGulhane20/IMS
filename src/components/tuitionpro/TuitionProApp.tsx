@@ -64,6 +64,10 @@ import { AveriqFeeManagement } from '../averiq/AveriqFeeManagement';
 import { AveriqInquiriesCRM } from '../averiq/AveriqInquiriesCRM';
 import { AveriqEventsCalendar } from '../averiq/AveriqEventsCalendar';
 import { AveriqAcademicReportsView } from '../averiq/AveriqAcademicReportsView';
+import { AveriqSubjectsAndClasses } from '../averiq/AveriqSubjectsAndClasses';
+import { AveriqStudyMaterials } from '../averiq/AveriqStudyMaterials';
+import { AveriqCommunications } from '../averiq/AveriqCommunications';
+import { AveriqRolesPermissions } from '../averiq/AveriqRolesPermissions';
 
 interface TuitionProAppProps {
   onSwitchRole?: () => void;
@@ -87,6 +91,7 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
   const {
     role,
     setRole,
+    isSidebarCollapsed,
     currentUser,
     isDarkMode,
     toggleDarkMode,
@@ -260,8 +265,8 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
         onOpenHelp={() => setQuickModal('help')}
       />
 
-      {/* Main Content Area (Offset for sidebar on desktop) */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-64 min-h-screen">
+      {/* Main Content Area (Offset for sidebar on desktop, responsive to collapsed state) */}
+      <div className={`flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
         {/* 3. Top Navigation */}
         <AveriqTopNav
           onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
@@ -287,18 +292,22 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
                 </button>
                 <span className="text-slate-300 dark:text-slate-700">/</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200 capitalize">
+                  {activeTab === 'cls' && 'Subject and Classes'}
                   {activeTab === 'stu' && 'Students Management'}
                   {activeTab === 'tea' && 'Faculty & Teachers'}
                   {activeTab === 'att' && 'Attendance & Biometrics'}
                   {activeTab === 'fee' && 'Fee Management & Collections'}
-                  {activeTab === 'ex' && 'Exams & Test Scheduler'}
+                  {activeTab === 'ex' && 'Exams and Results'}
+                  {activeTab === 'evt' && 'Event and Time table'}
+                  {activeTab === 'mat' && 'Study Materials'}
+                  {activeTab === 'comm' && 'Communications'}
+                  {activeTab === 'roles' && 'Roles and Permissions'}
                   {activeTab === 'inq' && 'Inquiries & Admission CRM'}
                   {activeTab === 'rep' && 'Academic Reports & Results'}
                   {activeTab === 'set' && 'Institution Settings'}
                   {activeTab === 'tb' && 'Timetable & Class Schedule'}
                   {activeTab === 'mk' && 'Marks & Examination Results'}
                   {activeTab === 'pf' && 'Student Progress Analytics'}
-                  {activeTab === 'mat' && 'Study Materials'}
                   {activeTab === 'crs' && 'Courses & Batches'}
                   {activeTab === 'ptm' && 'Parent Teacher Meetings'}
                   {activeTab === 'fin' && 'Finance & Accounts'}
@@ -422,6 +431,9 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
 
           {/* TEACHERS TAB */}
           {activeTab === 'tea' && <AveriqTeachersDirectory />}
+
+          {/* SUBJECTS AND CLASSES */}
+          {activeTab === 'cls' && <AveriqSubjectsAndClasses />}
 
           {/* TAB 2: STUDENTS */}
           {activeTab === 'stu' && <AveriqStudentsDirectory />}
@@ -1554,129 +1566,8 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
-          {/* TAB 10: STUDY MATERIAL */}
-          {(activeTab === 'mat' || (activeTab === 'set' && activeSettingsSubTab === 'mat')) && (
-            <div className="space-y-4">
-              {/* Add Material */}
-              <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f]">
-                <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100 mb-2">Add material</h3>
-                <form
-                  onSubmit={e => {
-                    e.preventDefault();
-                    if (!newMaterialForm.title) return showToast('Enter title');
-                    addStudyMaterial(newMaterialForm);
-                    setNewMaterialForm({ type: 'Notes', title: '', subject: 'Maths', batch: '10-A', url: '' });
-                  }}
-                  className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"
-                >
-                  <label className="flex flex-col text-[11px] text-slate-500">
-                    Type
-                    <select
-                      value={newMaterialForm.type}
-                      onChange={e => setNewMaterialForm({ ...newMaterialForm, type: e.target.value as any })}
-                      className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent mt-0.5"
-                    >
-                      <option value="Notes">Notes</option>
-                      <option value="Worksheet">Worksheet</option>
-                      <option value="Video">Video Link</option>
-                    </select>
-                  </label>
-                  <label className="flex flex-col text-[11px] text-slate-500">
-                    Title
-                    <input
-                      required
-                      placeholder="Title"
-                      value={newMaterialForm.title}
-                      onChange={e => setNewMaterialForm({ ...newMaterialForm, title: e.target.value })}
-                      className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent mt-0.5"
-                    />
-                  </label>
-                  <label className="flex flex-col text-[11px] text-slate-500">
-                    Subject
-                    <input
-                      value={newMaterialForm.subject}
-                      onChange={e => setNewMaterialForm({ ...newMaterialForm, subject: e.target.value })}
-                      className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent mt-0.5"
-                    />
-                  </label>
-                  <label className="flex flex-col text-[11px] text-slate-500">
-                    Batch
-                    <select
-                      value={newMaterialForm.batch}
-                      onChange={e => setNewMaterialForm({ ...newMaterialForm, batch: e.target.value })}
-                      className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent mt-0.5"
-                    >
-                      {batches.map(b => (
-                        <option key={b.id} value={b.name}>{b.name}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col text-[11px] text-slate-500 col-span-2">
-                    File name or link (YouTube / PDF)
-                    <input
-                      placeholder="e.g. trig-notes.pdf or https://youtube.com"
-                      value={newMaterialForm.url}
-                      onChange={e => setNewMaterialForm({ ...newMaterialForm, url: e.target.value })}
-                      className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent mt-0.5"
-                    />
-                  </label>
-                  <div className="col-span-2 sm:col-span-3 flex justify-end">
-                    <button type="submit" className="px-3 py-1.5 rounded bg-[#0f766e] text-white text-xs font-medium">
-                      Add Material
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Study Material Table */}
-              <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#18211f]">
-                <h3 className="font-semibold text-xs text-slate-900 dark:text-slate-100 mb-2">Available materials</h3>
-                <div className="overflow-x-auto text-xs">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b text-slate-400">
-                        <th className="py-1">Type</th>
-                        <th className="py-1">Title</th>
-                        <th className="py-1">Subject</th>
-                        <th className="py-1">Batch</th>
-                        <th className="py-1">Open</th>
-                        <th className="py-1 text-right">Delete</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {studyMaterials.map(m => (
-                        <tr key={m.id} className="border-b border-slate-100 dark:border-slate-800">
-                          <td className="py-1.5 font-mono text-slate-500">{m.type}</td>
-                          <td className="py-1.5 font-medium">{m.title}</td>
-                          <td className="py-1.5">{m.subject}</td>
-                          <td className="py-1.5 font-mono">{m.batch}</td>
-                          <td className="py-1.5">
-                            {m.url.startsWith('http') ? (
-                              <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline flex items-center gap-1">
-                                <span>Open</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span className="font-mono text-slate-400">{m.url}</span>
-                            )}
-                          </td>
-                          <td className="py-1.5 text-right">
-                            <button
-                              type="button"
-                              onClick={() => deleteStudyMaterial(m.id)}
-                              className="text-rose-600 hover:text-rose-700"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 ml-auto" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* TAB 10: STUDY MATERIALS & DIGITAL LIBRARY */}
+          {(activeTab === 'mat' || (activeTab === 'set' && activeSettingsSubTab === 'mat')) && <AveriqStudyMaterials />}
 
           {/* TAB 11: COURSES & BATCHES */}
           {(activeTab === 'crs' || (activeTab === 'set' && activeSettingsSubTab === 'crs')) && (
@@ -2123,6 +2014,9 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
+          {/* ROLES AND PERMISSIONS */}
+          {activeTab === 'roles' && <AveriqRolesPermissions />}
+
           {/* TAB 15: PARENT PORTAL */}
           {activeTab === 'por' && (
             <AveriqParentPortal
@@ -2133,38 +2027,8 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             />
           )}
 
-          {/* TAB 16: NOTIFICATIONS */}
-          {activeTab === 'notif' && (
-            <div className="space-y-4">
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-700 mb-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900 dark:text-white">Campus Notifications & Announcements</h2>
-                    <p className="text-xs text-slate-500">Official circulars, exam alerts, and academic updates</p>
-                  </div>
-                  <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
-                    {notices.length} Active Circulars
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {notices.map(n => (
-                    <div key={n.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                        <Bell className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-sm font-semibold text-slate-900 dark:text-white">{n.title}</h4>
-                          <span className="text-[11px] text-slate-400 font-mono">{(n as any).date || n.createdAt}</span>
-                        </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">{n.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* COMMUNICATIONS & BROADCAST */}
+          {(activeTab === 'comm' || activeTab === 'notif') && <AveriqCommunications />}
         </main>
       </div>
 
