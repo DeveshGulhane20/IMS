@@ -9,7 +9,7 @@ import {
   StudentAttendanceDetail
 } from '../types/academic';
 
-// 5 Teachers
+// 5 Teachers with Dedicated Attendance Profiles
 export const academicTeachers: DetailedTeacher[] = [
   {
     id: 'tea-001',
@@ -28,7 +28,31 @@ export const academicTeachers: DetailedTeacher[] = [
     phone: '+91 98251 10001',
     rating: 4.9,
     totalStudentsTaught: 380,
-    avatarBg: 'bg-blue-600'
+    avatarBg: 'bg-blue-600',
+    attendance: {
+      overallPercentage: 97.5,
+      workingDaysTotal: 220,
+      presentDays: 214,
+      approvedLeaves: 4,
+      dutyLeaves: 2,
+      lateArrivals: 2,
+      punctualityRate: 98.8,
+      averageCheckInTime: '08:21 AM',
+      monthlyBreakdown: [
+        { month: 'Jun', percentage: 98.0, present: 22, working: 22 },
+        { month: 'Jul', percentage: 96.0, present: 24, working: 25 },
+        { month: 'Aug', percentage: 97.5, present: 23, working: 24 },
+        { month: 'Sep', percentage: 98.2, present: 24, working: 24 },
+        { month: 'Oct', percentage: 97.8, present: 22, working: 23 }
+      ],
+      recentPunches: [
+        { date: 'Oct 30, 2026', checkIn: '08:18 AM', checkOut: '04:32 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 29, 2026', checkIn: '08:22 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 28, 2026', checkIn: '08:20 AM', checkOut: '04:35 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 27, 2026', checkIn: '08:42 AM', checkOut: '04:45 PM', status: 'LATE', shift: 'Morning Shift' },
+        { date: 'Oct 26, 2026', checkIn: '08:15 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
+      ]
+    }
   },
   {
     id: 'tea-002',
@@ -47,7 +71,31 @@ export const academicTeachers: DetailedTeacher[] = [
     phone: '+91 98251 10002',
     rating: 4.85,
     totalStudentsTaught: 320,
-    avatarBg: 'bg-purple-600'
+    avatarBg: 'bg-purple-600',
+    attendance: {
+      overallPercentage: 98.2,
+      workingDaysTotal: 220,
+      presentDays: 216,
+      approvedLeaves: 3,
+      dutyLeaves: 1,
+      lateArrivals: 1,
+      punctualityRate: 99.1,
+      averageCheckInTime: '08:16 AM',
+      monthlyBreakdown: [
+        { month: 'Jun', percentage: 99.0, present: 22, working: 22 },
+        { month: 'Jul', percentage: 98.0, present: 24, working: 25 },
+        { month: 'Aug', percentage: 98.0, present: 24, working: 24 },
+        { month: 'Sep', percentage: 97.5, present: 23, working: 24 },
+        { month: 'Oct', percentage: 98.5, present: 23, working: 23 }
+      ],
+      recentPunches: [
+        { date: 'Oct 30, 2026', checkIn: '08:14 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 29, 2026', checkIn: '08:17 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 28, 2026', checkIn: '08:19 AM', checkOut: '04:28 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 27, 2026', checkIn: '08:15 AM', checkOut: '04:35 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 26, 2026', checkIn: '08:16 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
+      ]
+    }
   },
   {
     id: 'tea-003',
@@ -66,7 +114,31 @@ export const academicTeachers: DetailedTeacher[] = [
     phone: '+91 98251 10003',
     rating: 4.8,
     totalStudentsTaught: 290,
-    avatarBg: 'bg-emerald-600'
+    avatarBg: 'bg-emerald-600',
+    attendance: {
+      overallPercentage: 96.4,
+      workingDaysTotal: 220,
+      presentDays: 212,
+      approvedLeaves: 5,
+      dutyLeaves: 3,
+      lateArrivals: 3,
+      punctualityRate: 97.4,
+      averageCheckInTime: '08:26 AM',
+      monthlyBreakdown: [
+        { month: 'Jun', percentage: 96.0, present: 21, working: 22 },
+        { month: 'Jul', percentage: 95.5, present: 23, working: 25 },
+        { month: 'Aug', percentage: 97.0, present: 23, working: 24 },
+        { month: 'Sep', percentage: 96.8, present: 23, working: 24 },
+        { month: 'Oct', percentage: 96.5, present: 22, working: 23 }
+      ],
+      recentPunches: [
+        { date: 'Oct 30, 2026', checkIn: '08:24 AM', checkOut: '04:35 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 29, 2026', checkIn: '08:28 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 28, 2026', checkIn: '08:25 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 27, 2026', checkIn: '08:40 AM', checkOut: '04:40 PM', status: 'LATE', shift: 'Morning Shift' },
+        { date: 'Oct 26, 2026', checkIn: '08:23 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
+      ]
+    }
   },
   {
     id: 'tea-004',
@@ -85,7 +157,31 @@ export const academicTeachers: DetailedTeacher[] = [
     phone: '+91 98251 10004',
     rating: 4.95,
     totalStudentsTaught: 450,
-    avatarBg: 'bg-amber-600'
+    avatarBg: 'bg-amber-600',
+    attendance: {
+      overallPercentage: 99.1,
+      workingDaysTotal: 220,
+      presentDays: 218,
+      approvedLeaves: 2,
+      dutyLeaves: 0,
+      lateArrivals: 1,
+      punctualityRate: 99.5,
+      averageCheckInTime: '08:14 AM',
+      monthlyBreakdown: [
+        { month: 'Jun', percentage: 100.0, present: 22, working: 22 },
+        { month: 'Jul', percentage: 99.0, present: 25, working: 25 },
+        { month: 'Aug', percentage: 98.8, present: 24, working: 24 },
+        { month: 'Sep', percentage: 99.2, present: 24, working: 24 },
+        { month: 'Oct', percentage: 98.8, present: 23, working: 23 }
+      ],
+      recentPunches: [
+        { date: 'Oct 30, 2026', checkIn: '08:12 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 29, 2026', checkIn: '08:15 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 28, 2026', checkIn: '08:14 AM', checkOut: '04:25 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 27, 2026', checkIn: '08:16 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 26, 2026', checkIn: '08:15 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
+      ]
+    }
   },
   {
     id: 'tea-005',
@@ -104,7 +200,31 @@ export const academicTeachers: DetailedTeacher[] = [
     phone: '+91 98251 10005',
     rating: 4.75,
     totalStudentsTaught: 275,
-    avatarBg: 'bg-rose-600'
+    avatarBg: 'bg-rose-600',
+    attendance: {
+      overallPercentage: 97.8,
+      workingDaysTotal: 220,
+      presentDays: 215,
+      approvedLeaves: 4,
+      dutyLeaves: 1,
+      lateArrivals: 2,
+      punctualityRate: 98.4,
+      averageCheckInTime: '08:20 AM',
+      monthlyBreakdown: [
+        { month: 'Jun', percentage: 98.0, present: 22, working: 22 },
+        { month: 'Jul', percentage: 97.0, present: 24, working: 25 },
+        { month: 'Aug', percentage: 98.0, present: 24, working: 24 },
+        { month: 'Sep', percentage: 98.0, present: 23, working: 24 },
+        { month: 'Oct', percentage: 98.0, present: 22, working: 23 }
+      ],
+      recentPunches: [
+        { date: 'Oct 30, 2026', checkIn: '08:19 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 29, 2026', checkIn: '08:21 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 28, 2026', checkIn: '08:23 AM', checkOut: '04:35 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 27, 2026', checkIn: '08:20 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
+        { date: 'Oct 26, 2026', checkIn: '08:22 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
+      ]
+    }
   }
 ];
 

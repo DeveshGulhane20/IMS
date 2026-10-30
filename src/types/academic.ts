@@ -74,6 +74,13 @@ export interface StudentAttendanceDetail {
   sem1Percentage: number;
   sem2Percentage: number;
   monthlyTrends: MonthlyAttendance[];
+  recentLogs?: {
+    date: string;
+    status: 'PRESENT' | 'ABSENT' | 'LATE';
+    period: string;
+    teacher: string;
+    subject: string;
+  }[];
 }
 
 export interface DetailedStudent {
@@ -103,6 +110,19 @@ export interface DetailedStudent {
   attendance: StudentAttendanceDetail;
 }
 
+export interface TeacherAttendanceRecord {
+  overallPercentage: number;
+  workingDaysTotal: number;
+  presentDays: number;
+  approvedLeaves: number;
+  dutyLeaves: number;
+  lateArrivals: number;
+  punctualityRate: number;
+  averageCheckInTime: string;
+  monthlyBreakdown: { month: string; percentage: number; present: number; working: number }[];
+  recentPunches: { date: string; checkIn: string; checkOut: string; status: 'ON_TIME' | 'LATE' | 'LEAVE'; shift: string }[];
+}
+
 export interface DetailedTeacher {
   id: string;
   employeeCode: string; // e.g. EMP-FAC-01
@@ -121,6 +141,7 @@ export interface DetailedTeacher {
   rating: number; // e.g. 4.9
   totalStudentsTaught: number;
   avatarBg: string;
+  attendance?: TeacherAttendanceRecord;
 }
 
 export interface DetailedParent {

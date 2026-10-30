@@ -64,10 +64,13 @@ import { AveriqFeeManagement } from '../averiq/AveriqFeeManagement';
 import { AveriqInquiriesCRM } from '../averiq/AveriqInquiriesCRM';
 import { AveriqEventsCalendar } from '../averiq/AveriqEventsCalendar';
 import { AveriqAcademicReportsView } from '../averiq/AveriqAcademicReportsView';
+import { AveriqExamsAndResults } from '../averiq/AveriqExamsAndResults';
 import { AveriqSubjectsAndClasses } from '../averiq/AveriqSubjectsAndClasses';
 import { AveriqStudyMaterials } from '../averiq/AveriqStudyMaterials';
 import { AveriqCommunications } from '../averiq/AveriqCommunications';
 import { AveriqRolesPermissions } from '../averiq/AveriqRolesPermissions';
+import { AveriqHomeworkModule } from '../averiq/AveriqHomeworkModule';
+import { AveriqMasterReportsHub } from '../averiq/AveriqMasterReportsHub';
 
 interface TuitionProAppProps {
   onSwitchRole?: () => void;
@@ -295,6 +298,7 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
                   {activeTab === 'cls' && 'Subject and Classes'}
                   {activeTab === 'stu' && 'Students Management'}
                   {activeTab === 'tea' && 'Faculty & Teachers'}
+                  {activeTab === 'hw' && 'Homework & Daily Assignments'}
                   {activeTab === 'att' && 'Attendance & Biometrics'}
                   {activeTab === 'fee' && 'Fee Management & Collections'}
                   {activeTab === 'ex' && 'Exams and Results'}
@@ -303,7 +307,7 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
                   {activeTab === 'comm' && 'Communications'}
                   {activeTab === 'roles' && 'Roles and Permissions'}
                   {activeTab === 'inq' && 'Inquiries & Admission CRM'}
-                  {activeTab === 'rep' && 'Academic Reports & Results'}
+                  {activeTab === 'rep' && 'Reports & Analytics Hub'}
                   {activeTab === 'set' && 'Institution Settings'}
                   {activeTab === 'tb' && 'Timetable & Class Schedule'}
                   {activeTab === 'mk' && 'Marks & Examination Results'}
@@ -403,7 +407,7 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
           )}
 
           {/* TAB 1: AVERIQ REDESIGNED DASHBOARD (ROLE-ADAPTIVE) */}
-          {activeTab === 'dash' && (
+          {(activeTab === 'dash' || activeTab === 'por') && (
             role === 'STUDENT' ? (
               <AveriqStudentPortal
                 onNavigateTab={(tabId) => {
@@ -437,6 +441,9 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
 
           {/* TAB 2: STUDENTS */}
           {activeTab === 'stu' && <AveriqStudentsDirectory />}
+
+          {/* HOMEWORK TAB */}
+          {activeTab === 'hw' && <AveriqHomeworkModule />}
           {false && activeTab === 'stu' && (
             <div className="space-y-4">
               {/* Profile Card if student selected */}
@@ -1102,8 +1109,8 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
-          {/* TAB 7: EXAMS & SEMESTERS */}
-          {activeTab === 'ex' && <AveriqAcademicReportsView />}
+          {/* TAB 7: EXAMS AND RESULTS */}
+          {activeTab === 'ex' && <AveriqExamsAndResults defaultTab="exams" />}
           {false && activeTab === 'ex' && (
             <div className="space-y-4">
               {/* Schedule Exam */}
@@ -1247,8 +1254,11 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
-          {/* TAB 8: MARKS, RESULTS & REPORTS */}
-          {(activeTab === 'mk' || activeTab === 'rep') && <AveriqAcademicReportsView />}
+          {/* TAB 8: MARKS & RESULTS */}
+          {activeTab === 'mk' && <AveriqExamsAndResults defaultTab="results" />}
+
+          {/* TAB 8B: CENTRALIZED MASTER REPORTS HUB */}
+          {activeTab === 'rep' && <AveriqMasterReportsHub />}
           {false && (activeTab === 'mk' || (activeTab === 'rep' && activeReportsSubTab === 'mk')) && (
             <div className="space-y-4">
               {/* Exam selector */}

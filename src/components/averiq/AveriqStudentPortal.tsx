@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useIMS } from '../../context/IMSContext';
 import {
   CheckSquare,
@@ -23,10 +23,13 @@ import {
   ClipboardList,
   Layers,
   Flame,
-  Check
+  Check,
+  Receipt,
+  Wallet
 } from 'lucide-react';
 import { SemesterComparisonChart } from '../charts/SemesterComparisonChart';
 import { academicStudents } from '../../data/mockAcademicData';
+import { HomeworkService } from '../../services/homeworkService';
 
 interface AveriqStudentPortalProps {
   onNavigateTab?: (tabId: string) => void;
@@ -38,9 +41,83 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
 }) => {
   const { showToast } = useIMS();
 
-  const studentName = 'Rohan Sharma';
-  const studentClass = 'Class 10A';
-  const studentBatch = 'Science Batch 2025-26';
+  // Dynamic Student record linked to Rohan Sharma (stu-001)
+  const [studentRecord, setStudentRecord] = useState(() => 
+    academicStudents.find(s => s.id === 'stu-001') || academicStudents[0]
+  );
+
+  // Dynamic Homework summary from HomeworkService
+  const [homeworkSummary, setHomeworkSummary] = useState(() => 
+    HomeworkService.getStudentHomeworkSummary('stu-001', 'batch-10a')
+  );
+
+  // Fee payment modal for student self-service
+  const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
+  const [isPayingFee, setIsPayingFee] = useState(false);
+  const [payFeeAmount, setPayFeeAmount] = useState<number>(studentRecord.fees.pendingFee || 2000);
+
+  // Listen to system-wide cross-role updates
+  useEffect(() => {
+    const handleSync = () => {
+      const match = academicStudents.find(s => s.id === 'stu-001') || academicStudents[0];
+      setStudentRecord({ ...match });
+      setHomeworkSummary(HomeworkService.getStudentHomeworkSummary('stu-001', 'batch-10a'));
+    };
+
+    window.addEventListener('averiq_attendance_updated', handleSync);
+    window.addEventListener('averiq_homework_updated', handleSync);
+    window.addEventListener('averiq_fees_updated', handleSync);
+
+    return () => {
+      window.removeEventListener('averiq_attendance_updated', handleSync);
+      window.removeEventListener('averiq_homework_updated', handleSync);
+      window.removeEventListener('averiq_fees_updated', handleSync);
+    };
+  }, []);
+
+  // Student toggle homework status: PENDING <-> DONE
+  const handleToggleHomework = (hwId: string) => {
+    const updated = HomeworkService.toggleStudentStatus(hwId, 'stu-001');
+    if (updated) {
+      setHomeworkSummary(HomeworkService.getStudentHomeworkSummary('stu-001', 'batch-10a'));
+      const status = updated.studentSubmissions['stu-001']?.status;
+      showToast(status === 'DONE' ? 'Assignment marked as completed!' : 'Assignment marked as pending');
+    }
+  };
+
+  // Student fee settlement
+  const handlePayFee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (payFeeAmount <= 0) return;
+    setIsPayingFee(true);
+    setTimeout(() => {
+      setIsPayingFee(false);
+      setIsFeeModalOpen(false);
+
+      const match = academicStudents.find(s => s.id === 'stu-001') || academicStudents[0];
+      match.fees.paidFee += payFeeAmount;
+      match.fees.transactions.unshift({
+        id: `txn-${Date.now()}`,
+        receiptNo: `REC-${Date.now().toString().slice(-6)}`,
+        amount: payFeeAmount,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        mode: 'UPI',
+        status: 'Completed',
+        referenceNo: `REF-${Date.now().toString().slice(-6)}`,
+        description: 'Term Fee Online Settlement'
+      });
+
+      setStudentRecord({ ...match });
+      window.dispatchEvent(new CustomEvent('averiq_fees_updated', {
+        detail: { studentId: 'stu-001', amount: payFeeAmount }
+      }));
+      showToast(`Fee payment of ₹${payFeeAmount.toLocaleString('en-IN')} completed successfully!`);
+    }, 1000);
+  };
+
+  const studentName = studentRecord.name || 'Rohan Sharma';
+  const studentClass = `${studentRecord.gradeLevel} ${studentRecord.section}`;
+  const studentBatch = studentRecord.batchName;
 
   // State for interactive modals
   const [showSemesterChart, setShowSemesterChart] = useState(false);
@@ -236,14 +313,18 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
 
       {/* 2. KPI Cards (Row 1 - 5 Cards Matching Design System) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Card 1: My Attendance: 92% (Circular Chart) */}
+        {/* Card 1: My Attendance: Dynamic */}
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
               My Attendance
             </span>
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full">
-              Optimal
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              studentRecord.attendance.overallPercentage >= 85
+                ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50'
+                : 'text-amber-600 bg-amber-50 dark:bg-amber-950/50'
+            }`}>
+              {studentRecord.attendance.overallPercentage >= 85 ? 'Optimal' : 'Needs Focus'}
             </span>
           </div>
           <div className="mt-2 flex items-center gap-3">
@@ -267,20 +348,22 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
                   strokeWidth="4"
                   className="text-[#00C853]"
                   strokeDasharray={2 * Math.PI * 20}
-                  strokeDashoffset={2 * Math.PI * 20 * (1 - 0.92)}
+                  strokeDashoffset={2 * Math.PI * 20 * (1 - (studentRecord.attendance.overallPercentage || 92) / 100)}
                   strokeLinecap="round"
                   fill="transparent"
                 />
               </svg>
               <span className="absolute font-extrabold text-xs text-slate-900 dark:text-white font-mono">
-                92%
+                {studentRecord.attendance.overallPercentage}%
               </span>
             </div>
             <div>
               <div className="text-lg font-extrabold text-slate-900 dark:text-white font-mono leading-tight">
-                92%
+                {studentRecord.attendance.overallPercentage}%
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">36 of 39 Present</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">
+                {studentRecord.attendance.presentDays} of {studentRecord.attendance.totalWorkingDays} Present
+              </div>
             </div>
           </div>
         </div>
@@ -346,11 +429,11 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
           </div>
         </div>
 
-        {/* Card 5: Pending Assignments: 2 */}
+        {/* Card 5: Pending Assignments: Dynamic */}
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Pending Assignments
+              Pending Homework
             </span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-[#F57C00] flex items-center justify-center">
               <ClipboardList className="w-4 h-4" />
@@ -358,10 +441,10 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
-              2
+              {homeworkSummary.pending}
             </div>
             <div className="text-[11px] text-amber-600 font-medium mt-1 truncate">
-              Due in 2 days
+              {homeworkSummary.completed} of {homeworkSummary.total} done ({homeworkSummary.completionRate}%)
             </div>
           </div>
         </div>
@@ -643,14 +726,14 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
                     strokeWidth="10"
                     className="text-[#00C853]"
                     strokeDasharray={2 * Math.PI * 52}
-                    strokeDashoffset={2 * Math.PI * 52 * (1 - 0.92)}
+                    strokeDashoffset={2 * Math.PI * 52 * (1 - (studentRecord.attendance.overallPercentage || 92) / 100)}
                     strokeLinecap="round"
                     fill="transparent"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">
-                    92%
+                    {studentRecord.attendance.overallPercentage}%
                   </span>
                   <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
                     Overall
@@ -666,7 +749,7 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
                     <span>Present</span>
                   </div>
                   <div className="text-lg font-bold font-mono text-[#00C853] mt-1">
-                    118
+                    {studentRecord.attendance.presentDays}
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5">Classes</div>
                 </div>
@@ -677,7 +760,7 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
                     <span>Absent</span>
                   </div>
                   <div className="text-lg font-bold font-mono text-[#D32F2F] mt-1">
-                    7
+                    {studentRecord.attendance.absentDays}
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5">Classes</div>
                 </div>
@@ -688,7 +771,7 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
                     <span>Total</span>
                   </div>
                   <div className="text-lg font-bold font-mono text-[#0056D6] mt-1">
-                    125
+                    {studentRecord.attendance.totalWorkingDays}
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5">Sessions</div>
                 </div>
@@ -707,16 +790,72 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
 
         {/* Right Column (5 Cols): Upcoming Tests + Results + Study Material */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Upcoming Tests / Assignments Card */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-3.5">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <FileCheck className="w-4 h-4 text-purple-600" />
-                <span>Upcoming Tests / Assignments</span>
-              </h3>
+          {/* Fee Overview & Online Payment Quick Card */}
+          <div className="bg-gradient-to-br from-white to-blue-50/40 dark:from-slate-900 dark:to-slate-900 border border-blue-100 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-600 text-white">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Fee Status</h3>
+                  <p className="text-[10px] text-slate-500">Annual Academic Session 2025-26</p>
+                </div>
+              </div>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                studentRecord.fees.pendingFee === 0
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-600 border border-rose-200'
+              }`}>
+                {studentRecord.fees.pendingFee === 0 ? 'Fully Paid' : 'Pending Dues'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 py-2 text-center text-xs">
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">Total</span>
+                <span className="font-bold font-mono text-slate-900 dark:text-white">₹{studentRecord.fees.totalFee.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">Paid</span>
+                <span className="font-bold font-mono text-emerald-600">₹{studentRecord.fees.paidFee.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="p-2 rounded-xl bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] text-slate-400 block">Pending</span>
+                <span className={`font-bold font-mono ${studentRecord.fees.pendingFee > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                  ₹{studentRecord.fees.pendingFee.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {studentRecord.fees.pendingFee > 0 && (
               <button
                 type="button"
-                onClick={() => onNavigateTab ? onNavigateTab('ex') : null}
+                onClick={() => {
+                  setPayFeeAmount(studentRecord.fees.pendingFee);
+                  setIsFeeModalOpen(true);
+                }}
+                className="w-full mt-2.5 py-2 rounded-xl bg-[#0056D6] hover:bg-blue-600 text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Pay Pending Dues (₹{studentRecord.fees.pendingFee.toLocaleString('en-IN')})</span>
+              </button>
+            )}
+          </div>
+
+          {/* Upcoming Tests / Homework Assignments Card */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-3.5">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <ClipboardList className="w-4 h-4 text-purple-600" />
+                  <span>Homework & Assignments</span>
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Assigned by faculty · Click status to toggle completion</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateTab ? onNavigateTab('hw') : null}
                 className="text-xs font-semibold text-[#0056D6] hover:underline"
               >
                 View All →
@@ -724,32 +863,54 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
             </div>
 
             <div className="space-y-2.5">
-              {upcomingTestsAssignments.map(item => (
-                <div
-                  key={item.id}
-                  className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors flex items-center justify-between gap-3 group"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${item.tagColor}`}>
-                        {item.type}
-                      </span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {item.title}
-                      </span>
+              {homeworkSummary.items.slice(0, 4).map(item => {
+                const isDone = item.record.status === 'DONE';
+                return (
+                  <div
+                    key={item.homework.id}
+                    className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors flex items-center justify-between gap-3 group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                          {item.homework.subject}
+                        </span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {item.homework.title}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-2">
+                        <span>{item.homework.teacherName}</span>
+                        <span>·</span>
+                        <span className="font-mono text-slate-600 dark:text-slate-400 font-medium">Due: {item.homework.dueDate}</span>
+                      </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-2">
-                      <span>{item.subject}</span>
-                      <span>·</span>
-                      <span className="font-mono text-slate-600 dark:text-slate-400 font-medium">{item.dueDate}</span>
-                    </div>
-                  </div>
 
-                  <span className="text-[11px] font-semibold text-slate-400 group-hover:text-[#0056D6] shrink-0">
-                    →
-                  </span>
-                </div>
-              ))}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleHomework(item.homework.id)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all ${
+                        isDone
+                          ? 'bg-emerald-50 text-[#00C853] border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 hover:bg-amber-100'
+                      }`}
+                      title={isDone ? 'Mark as Pending' : 'Mark as Done'}
+                    >
+                      {isDone ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#00C853]" />
+                          <span>Done</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Pending</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -1076,6 +1237,85 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student Online Fee Settlement Modal */}
+      {isFeeModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-[#0056D6]" />
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Pay Pending Academic Fee
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFeeModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePayFee} className="space-y-4 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border space-y-1">
+                <div className="flex justify-between text-slate-500">
+                  <span>Student Name:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{studentRecord.name}</span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Class & Batch:</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">{studentRecord.gradeLevel} {studentRecord.section}</span>
+                </div>
+                <div className="flex justify-between text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-700">
+                  <span>Current Outstanding:</span>
+                  <span className="font-bold font-mono text-rose-600">₹{studentRecord.fees.pendingFee.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Payment Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={studentRecord.fees.pendingFee}
+                  value={payFeeAmount}
+                  onChange={e => setPayFeeAmount(Number(e.target.value))}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent font-mono font-bold text-sm"
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsFeeModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPayingFee}
+                  className="flex-1 py-2 rounded-xl bg-[#0056D6] hover:bg-blue-600 text-white font-bold flex items-center justify-center gap-2 shadow-xs"
+                >
+                  {isPayingFee ? (
+                    <span>Processing Payment...</span>
+                  ) : (
+                    <>
+                      <Receipt className="w-4 h-4" />
+                      <span>Confirm & Generate Receipt</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

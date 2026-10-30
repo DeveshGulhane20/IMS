@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useIMS } from '../../context/IMSContext';
 import {
   Users,
@@ -21,39 +21,49 @@ import {
   Megaphone,
   UserCheck,
   Building,
-  GraduationCap
+  GraduationCap,
+  ClipboardList
 } from 'lucide-react';
 import { SemesterComparisonChart } from '../charts/SemesterComparisonChart';
 import { academicStudents } from '../../data/mockAcademicData';
+import { HomeworkService } from '../../services/homeworkService';
 
 interface AveriqParentPortalProps {
   onNavigateTab?: (tabId: string) => void;
   onOpenPayModal?: () => void;
 }
 
-export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
-  onNavigateTab
-}) => {
-  const { showToast } = useIMS();
+// Dynamic helper to build linked children profiles
+const buildChildrenFromAcademic = () => {
+  const rohan = academicStudents.find(s => s.id === 'stu-001') || academicStudents[0];
+  const ananya = academicStudents.find(s => s.id === 'stu-015' || s.name.includes('Ananya')) || academicStudents[14];
 
-  // Multi-child profiles
-  const [children, setChildren] = useState([
+  const hwRohan = HomeworkService.getStudentHomeworkSummary('stu-001', 'batch-10a');
+  const hwAnanya = HomeworkService.getStudentHomeworkSummary(ananya.id, ananya.batchId);
+
+  return [
     {
       id: 'rohan',
-      name: 'Rohan Sharma',
-      class: 'Class 10',
-      section: 'Class 10 | Science 2025-26',
-      rollNo: '1001',
-      attendance: 92,
-      presentClasses: 36,
-      absentClasses: 3,
-      totalClasses: 39,
-      totalFee: 15000,
-      paidFee: 13000,
-      pendingFee: 2000,
-      nextExam: 'Mathematics',
-      nextExamDate: '12 Nov 2025',
+      studentId: rohan.id,
+      batchId: rohan.batchId,
+      name: rohan.name,
+      class: rohan.gradeLevel,
+      section: `${rohan.gradeLevel} | ${rohan.batchName}`,
+      rollNo: rohan.rollNumber,
+      attendance: rohan.attendance.overallPercentage,
+      presentClasses: rohan.attendance.presentDays,
+      absentClasses: rohan.attendance.absentDays,
+      totalClasses: rohan.attendance.totalWorkingDays,
+      totalFee: rohan.fees.totalFee,
+      paidFee: rohan.fees.paidFee,
+      pendingFee: rohan.fees.pendingFee,
+      nextExam: 'Mathematics Unit Test 5',
+      nextExamDate: '12 Nov 2026',
       avgScore: 78,
+      homeworkPending: hwRohan.pending,
+      homeworkCompleted: hwRohan.completed,
+      homeworkTotal: hwRohan.total,
+      homeworkItems: hwRohan.items,
       results: [
         { subject: 'Mathematics', score: 78, max: 100, pct: 78, barColor: 'bg-[#0056D6]' },
         { subject: 'Physics', score: 82, max: 100, pct: 82, barColor: 'bg-[#7C3AED]' },
@@ -70,20 +80,26 @@ export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
     },
     {
       id: 'ananya',
-      name: 'Ananya Sharma',
-      class: 'Class 8',
-      section: 'Class 8 | Batch: General 2025-26',
-      rollNo: '8024',
-      attendance: 96,
-      presentClasses: 38,
-      absentClasses: 1,
-      totalClasses: 39,
-      totalFee: 12000,
-      paidFee: 12000,
-      pendingFee: 0,
+      studentId: ananya.id,
+      batchId: ananya.batchId,
+      name: ananya.name,
+      class: ananya.gradeLevel,
+      section: `${ananya.gradeLevel} | ${ananya.batchName}`,
+      rollNo: ananya.rollNumber,
+      attendance: ananya.attendance.overallPercentage,
+      presentClasses: ananya.attendance.presentDays,
+      absentClasses: ananya.attendance.absentDays,
+      totalClasses: ananya.attendance.totalWorkingDays,
+      totalFee: ananya.fees.totalFee,
+      paidFee: ananya.fees.paidFee,
+      pendingFee: ananya.fees.pendingFee,
       nextExam: 'Science & Environment',
-      nextExamDate: '15 Nov 2025',
+      nextExamDate: '15 Nov 2026',
       avgScore: 89,
+      homeworkPending: hwAnanya.pending,
+      homeworkCompleted: hwAnanya.completed,
+      homeworkTotal: hwAnanya.total,
+      homeworkItems: hwAnanya.items,
       results: [
         { subject: 'Mathematics', score: 92, max: 100, pct: 92, barColor: 'bg-[#0056D6]' },
         { subject: 'General Science', score: 95, max: 100, pct: 95, barColor: 'bg-[#7C3AED]' },
@@ -98,10 +114,36 @@ export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
         { time: '02:00 PM – 03:00 PM', subject: 'Social Studies', status: 'Upcoming', icon: Clock, color: 'text-blue-600' }
       ]
     }
-  ]);
+  ];
+};
+
+export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
+  onNavigateTab
+}) => {
+  const { showToast } = useIMS();
+
+  // Multi-child profiles synchronized dynamically
+  const [children, setChildren] = useState(buildChildrenFromAcademic);
 
   const [selectedChildId, setSelectedChildId] = useState('rohan');
   const activeChild = children.find(c => c.id === selectedChildId) || children[0];
+
+  // Cross-role synchronization
+  useEffect(() => {
+    const handleSync = () => {
+      setChildren(buildChildrenFromAcademic());
+    };
+
+    window.addEventListener('averiq_attendance_updated', handleSync);
+    window.addEventListener('averiq_homework_updated', handleSync);
+    window.addEventListener('averiq_fees_updated', handleSync);
+
+    return () => {
+      window.removeEventListener('averiq_attendance_updated', handleSync);
+      window.removeEventListener('averiq_homework_updated', handleSync);
+      window.removeEventListener('averiq_fees_updated', handleSync);
+    };
+  }, []);
 
   // Fee payment state
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -110,6 +152,11 @@ export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
   const [isPaying, setIsPaying] = useState(false);
   const [isPaySuccess, setIsPaySuccess] = useState(false);
   const [showSemesterComparison, setShowSemesterComparison] = useState(false);
+
+  // Keep payment amount synced when switching child
+  useEffect(() => {
+    setPayAmount(activeChild.pendingFee);
+  }, [selectedChildId, activeChild.pendingFee]);
 
   // Message modal state
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
@@ -127,17 +174,30 @@ export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
     setTimeout(() => {
       setIsPaying(false);
       setIsPaySuccess(true);
-      // Update state
-      setChildren(prev =>
-        prev.map(c => {
-          if (c.id === activeChild.id) {
-            const newPaid = c.paidFee + payAmount;
-            const newPending = Math.max(0, c.totalFee - newPaid);
-            return { ...c, paidFee: newPaid, pendingFee: newPending };
-          }
-          return c;
-        })
-      );
+
+      const targetId = activeChild.studentId;
+      const match = academicStudents.find(s => s.id === targetId);
+      if (match) {
+        match.fees.paidFee += payAmount;
+        match.fees.pendingFee = Math.max(0, match.fees.totalFee - match.fees.paidFee);
+        match.fees.transactions.unshift({
+          id: `txn-${Date.now()}`,
+          receiptNo: `REC-${Date.now().toString().slice(-6)}`,
+          amount: payAmount,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          mode: paymentMethod,
+          status: 'Completed',
+          referenceNo: `REF-${Date.now().toString().slice(-6)}`,
+          description: 'Term Fee Online Payment'
+        });
+      }
+
+      setChildren(buildChildrenFromAcademic());
+
+      window.dispatchEvent(new CustomEvent('averiq_fees_updated', {
+        detail: { studentId: targetId, amount: payAmount }
+      }));
+
       setTimeout(() => {
         setIsPaySuccess(false);
         setIsPayModalOpen(false);
@@ -720,37 +780,79 @@ export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
             </div>
           </div>
 
-          {/* Upcoming Tests / Assignments */}
+          {/* Upcoming Tests / Homework Assignments */}
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <FileCheck className="w-4 h-4 text-purple-600" />
-                <span>Upcoming Tests / Assignments</span>
-              </h3>
-              <span className="text-xs text-[#0056D6] font-semibold hover:underline cursor-pointer">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <ClipboardList className="w-4 h-4 text-purple-600" />
+                  <span>Homework & Assigned Tasks</span>
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Real-time status for {activeChild.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateTab ? onNavigateTab('hw') : null}
+                className="text-xs text-[#0056D6] font-semibold hover:underline"
+              >
                 View All →
-              </span>
+              </button>
             </div>
 
             <div className="space-y-2">
-              {upcomingTests.map(test => (
-                <div
-                  key={test.id}
-                  className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs"
-                >
-                  <div>
-                    <span className="font-semibold text-slate-900 dark:text-white block">
-                      {test.title}
-                    </span>
-                    <span className="text-[10px] text-slate-500">
-                      {test.subject}
+              {(activeChild.homeworkItems && activeChild.homeworkItems.length > 0) ? (
+                activeChild.homeworkItems.slice(0, 4).map(item => {
+                  const isDone = item.record.status === 'DONE';
+                  return (
+                    <div
+                      key={item.homework.id}
+                      className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                            {item.homework.subject}
+                          </span>
+                          <span className="font-semibold text-slate-900 dark:text-white truncate">
+                            {item.homework.title}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 block mt-0.5">
+                          Teacher: {item.homework.teacherName} · Due: {item.homework.dueDate}
+                        </span>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 border ${
+                          isDone
+                            ? 'bg-emerald-50 text-[#00C853] border-emerald-200 dark:bg-emerald-950/40'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40'
+                        }`}
+                      >
+                        {isDone ? 'Completed' : 'Pending'}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                upcomingTests.map(test => (
+                  <div
+                    key={test.id}
+                    className="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <span className="font-semibold text-slate-900 dark:text-white block">
+                        {test.title}
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        {test.subject}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono text-purple-600 font-semibold">
+                      {test.dueDate}
                     </span>
                   </div>
-                  <span className="text-[11px] font-mono text-purple-600 font-semibold">
-                    {test.dueDate}
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

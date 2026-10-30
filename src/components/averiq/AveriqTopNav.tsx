@@ -33,6 +33,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
 }) => {
   const {
     role,
+    setRole,
     currentUser,
     isMobilePreviewOpen,
     setMobilePreviewOpen,
@@ -432,6 +433,71 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                 </div>
                 <div className="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold text-[10px]">
                   {persona.roleLabel}
+                </div>
+              </div>
+
+              {/* Quick 1-Click Role Switcher */}
+              <div className="p-2 border-b border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                  Switch Active Portal Role:
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRole('ADMIN');
+                      onNavigateTab('dash');
+                      setIsProfileOpen(false);
+                    }}
+                    className={`px-2 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
+                      role === 'ADMIN' ? 'bg-blue-600 text-white' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                    <span>Admin</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRole('TEACHER');
+                      onNavigateTab('dash');
+                      setIsProfileOpen(false);
+                    }}
+                    className={`px-2 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
+                      role === 'TEACHER' ? 'bg-purple-600 text-white' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    <span>Teacher</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRole('STUDENT');
+                      onNavigateTab('dash');
+                      setIsProfileOpen(false);
+                    }}
+                    className={`px-2 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
+                      role === 'STUDENT' ? 'bg-emerald-600 text-white' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span>Student</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRole('PARENT');
+                      onNavigateTab('por');
+                      setIsProfileOpen(false);
+                    }}
+                    className={`px-2 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
+                      role === 'PARENT' ? 'bg-amber-600 text-white' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span>Parent</span>
+                  </button>
                 </div>
               </div>
 
