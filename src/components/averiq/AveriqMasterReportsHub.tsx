@@ -179,28 +179,11 @@ export const AveriqMasterReportsHub: React.FC = () => {
   }, [feesLedgerRows, tableSearchQuery, selectedClass]);
 
   // 3. Results & Performance Data
-  const resultsGradeDistribution = [
-    { grade: 'A+', label: 'A+ (90-100%)', count: 284, pct: 22.9, color: '#10B981' },
-    { grade: 'A', label: 'A (80-89%)', count: 392, pct: 31.6, color: '#0056D6' },
-    { grade: 'B+', label: 'B+ (70-79%)', count: 248, pct: 20.0, color: '#7C3AED' },
-    { grade: 'B', label: 'B (60-69%)', count: 138, pct: 11.1, color: '#F59E0B' },
-    { grade: 'C', label: 'C (50-59%)', count: 96, pct: 7.7, color: '#FB923C' },
-    { grade: 'Below C', label: 'Below C (<50%)', count: 82, pct: 6.6, color: '#EF4444' }
-  ];
-
-  const resultsSubjectData = [
-    { subject: 'Mathematics', avg: 74.8, passRate: 84.2 },
-    { subject: 'Physics', avg: 76.5, passRate: 86.8 },
-    { subject: 'Chemistry', avg: 78.2, passRate: 89.1 },
-    { subject: 'English', avg: 81.4, passRate: 92.5 },
-    { subject: 'Biology', avg: 79.6, passRate: 88.4 },
-    { subject: 'Social Science', avg: 77.0, passRate: 87.0 }
-  ];
-
+  // 3. Results & Performance Data (Dynamic to 50 master students)
   const resultsStudentRows = useMemo(() => {
     return academicStudents.map((s, idx) => {
-      const s1 = s.semesters.sem1.percentage;
-      const s2 = s.semesters.sem2.percentage;
+      const s1 = s.semesters?.sem1?.percentage ?? 75;
+      const s2 = s.semesters?.sem2?.percentage ?? 78;
       const aggregate = Math.round((s1 + s2) / 2);
       const grade = aggregate >= 90 ? 'A+' : aggregate >= 80 ? 'A' : aggregate >= 70 ? 'B+' : aggregate >= 60 ? 'B' : aggregate >= 50 ? 'C' : 'Below C';
       const isPassed = aggregate >= 40;
@@ -220,6 +203,38 @@ export const AveriqMasterReportsHub: React.FC = () => {
     });
   }, []);
 
+  const resultsGradeDistribution = useMemo(() => {
+    const total = resultsStudentRows.length || 1;
+    const gradeCounts: Record<string, number> = {
+      'A+': 0,
+      'A': 0,
+      'B+': 0,
+      'B': 0,
+      'C': 0,
+      'Below C': 0
+    };
+    resultsStudentRows.forEach(r => {
+      if (gradeCounts[r.grade] !== undefined) {
+        gradeCounts[r.grade]++;
+      } else {
+        gradeCounts['Below C']++;
+      }
+    });
+
+    return [
+      { grade: 'A+', label: 'A+ (90-100%)', count: gradeCounts['A+'], pct: Number(((gradeCounts['A+'] / total) * 100).toFixed(1)), color: '#10B981' },
+      { grade: 'A', label: 'A (80-89%)', count: gradeCounts['A'], pct: Number(((gradeCounts['A'] / total) * 100).toFixed(1)), color: '#0056D6' },
+      { grade: 'B+', label: 'B+ (70-79%)', count: gradeCounts['B+'], pct: Number(((gradeCounts['B+'] / total) * 100).toFixed(1)), color: '#7C3AED' },
+      { grade: 'B', label: 'B (60-69%)', count: gradeCounts['B'], pct: Number(((gradeCounts['B'] / total) * 100).toFixed(1)), color: '#F59E0B' },
+      { grade: 'C', label: 'C (50-59%)', count: gradeCounts['C'], pct: Number(((gradeCounts['C'] / total) * 100).toFixed(1)), color: '#FB923C' },
+      { grade: 'Below C', label: 'Below C (<50%)', count: gradeCounts['Below C'], pct: Number(((gradeCounts['Below C'] / total) * 100).toFixed(1)), color: '#EF4444' }
+    ];
+  }, [resultsStudentRows]);
+
+  const resultsPassedCount = useMemo(() => {
+    return resultsStudentRows.filter(r => r.status === 'Passed').length;
+  }, [resultsStudentRows]);
+
   const filteredResultsRows = useMemo(() => {
     return resultsStudentRows.filter(row => {
       const matchSearch =
@@ -230,6 +245,15 @@ export const AveriqMasterReportsHub: React.FC = () => {
       return matchSearch && matchClass;
     });
   }, [resultsStudentRows, tableSearchQuery, selectedClass]);
+
+  const resultsSubjectData = [
+    { subject: 'Mathematics', avg: 74.8, passRate: 84.2 },
+    { subject: 'Physics', avg: 76.5, passRate: 86.8 },
+    { subject: 'Chemistry', avg: 78.2, passRate: 89.1 },
+    { subject: 'English', avg: 81.4, passRate: 92.5 },
+    { subject: 'Biology', avg: 79.6, passRate: 88.4 },
+    { subject: 'Social Science', avg: 77.0, passRate: 87.0 }
+  ];
 
   // 4. Exams Data
   const examsSubjectDistribution = [
@@ -249,14 +273,14 @@ export const AveriqMasterReportsHub: React.FC = () => {
   ];
 
   const examsMasterRows = [
-    { id: 'ex-01', title: 'Mathematics Unit Test 5', classGrade: 'Class 10A', subject: 'Mathematics', dateTime: 'Nov 12, 2026', time: '08:30 AM – 10:30 AM', venue: 'Hall A', supervisor: 'Prof. Rajesh Sharma', maxMarks: 50, passMarks: 17, enrolled: 45, status: 'Upcoming' },
-    { id: 'ex-02', title: 'Physics Practical Term 2', classGrade: 'Class 10B', subject: 'Physics', dateTime: 'Nov 16, 2026', time: '09:00 AM – 11:30 AM', venue: 'Physics Lab', supervisor: 'Dr. Neha Kulkarni', maxMarks: 40, passMarks: 14, enrolled: 42, status: 'Upcoming' },
-    { id: 'ex-03', title: 'Chemistry Organic Reactions Assessment', classGrade: 'Class 9A', subject: 'Chemistry', dateTime: 'Nov 18, 2026', time: '10:00 AM – 11:30 AM', venue: 'Room 204', supervisor: 'Prof. Amit Verma', maxMarks: 40, passMarks: 14, enrolled: 40, status: 'Upcoming' },
-    { id: 'ex-04', title: 'English Literature Assessment', classGrade: 'Class 8A', subject: 'English', dateTime: 'Nov 20, 2026', time: '09:00 AM – 11:00 AM', venue: 'Junior Wing Hall', supervisor: 'Mrs. Sunita Rao', maxMarks: 50, passMarks: 18, enrolled: 38, status: 'Upcoming' },
-    { id: 'ex-05', title: 'Social Studies Term 2 Evaluation', classGrade: 'Class 10A', subject: 'Social Science', dateTime: 'Nov 24, 2026', time: '08:30 AM – 10:30 AM', venue: 'Hall B', supervisor: 'Dr. Anand Joshi', maxMarks: 50, passMarks: 17, enrolled: 45, status: 'Upcoming' },
-    { id: 'ex-06', title: 'Semester 1 Pre-Board Examination', classGrade: 'Class 10A', subject: 'Mathematics', dateTime: 'Sep 15, 2026', time: '09:00 AM – 12:00 PM', venue: 'Auditorium Central', supervisor: 'Prof. Rajesh Sharma', maxMarks: 100, passMarks: 33, enrolled: 45, status: 'Completed' },
-    { id: 'ex-07', title: 'Physics Mechanics Final Evaluation', classGrade: 'Class 10B', subject: 'Physics', dateTime: 'Sep 18, 2026', time: '09:00 AM – 11:30 AM', venue: 'Hall B', supervisor: 'Dr. Neha Kulkarni', maxMarks: 80, passMarks: 27, enrolled: 42, status: 'Completed' },
-    { id: 'ex-08', title: 'Chemistry Periodic Mid-Term Test', classGrade: 'Class 9A', subject: 'Chemistry', dateTime: 'Sep 22, 2026', time: '10:00 AM – 11:30 AM', venue: 'Room 202', supervisor: 'Prof. Amit Verma', maxMarks: 50, passMarks: 17, enrolled: 40, status: 'Completed' }
+    { id: 'ex-01', title: 'Mathematics Unit Test 5', classGrade: 'Class 10A', subject: 'Mathematics', dateTime: 'Nov 12, 2026', time: '08:30 AM – 10:30 AM', venue: 'Hall A', supervisor: 'Prof. Rajesh Sharma', maxMarks: 50, passMarks: 17, enrolled: 20, status: 'Upcoming' },
+    { id: 'ex-02', title: 'Physics Practical Term 2', classGrade: 'Class 10B', subject: 'Physics', dateTime: 'Nov 16, 2026', time: '09:00 AM – 11:30 AM', venue: 'Physics Lab', supervisor: 'Dr. Neha Kulkarni', maxMarks: 40, passMarks: 14, enrolled: 15, status: 'Upcoming' },
+    { id: 'ex-03', title: 'Chemistry Organic Reactions Assessment', classGrade: 'Class 9A', subject: 'Chemistry', dateTime: 'Nov 18, 2026', time: '10:00 AM – 11:30 AM', venue: 'Room 204', supervisor: 'Prof. Amit Verma', maxMarks: 40, passMarks: 14, enrolled: 9, status: 'Upcoming' },
+    { id: 'ex-04', title: 'English Literature Assessment', classGrade: 'Class 8A', subject: 'English', dateTime: 'Nov 20, 2026', time: '09:00 AM – 11:00 AM', venue: 'Junior Wing Hall', supervisor: 'Mrs. Sunita Rao', maxMarks: 50, passMarks: 18, enrolled: 6, status: 'Upcoming' },
+    { id: 'ex-05', title: 'Social Studies Term 2 Evaluation', classGrade: 'Class 10A', subject: 'Social Science', dateTime: 'Nov 24, 2026', time: '08:30 AM – 10:30 AM', venue: 'Hall B', supervisor: 'Dr. Anand Joshi', maxMarks: 50, passMarks: 17, enrolled: 20, status: 'Upcoming' },
+    { id: 'ex-06', title: 'Semester 1 Pre-Board Examination', classGrade: 'Class 10A', subject: 'Mathematics', dateTime: 'Sep 15, 2026', time: '09:00 AM – 12:00 PM', venue: 'Auditorium Central', supervisor: 'Prof. Rajesh Sharma', maxMarks: 100, passMarks: 33, enrolled: 20, status: 'Completed' },
+    { id: 'ex-07', title: 'Physics Mechanics Final Evaluation', classGrade: 'Class 10B', subject: 'Physics', dateTime: 'Sep 18, 2026', time: '09:00 AM – 11:30 AM', venue: 'Hall B', supervisor: 'Dr. Neha Kulkarni', maxMarks: 80, passMarks: 27, enrolled: 15, status: 'Completed' },
+    { id: 'ex-08', title: 'Chemistry Periodic Mid-Term Test', classGrade: 'Class 9A', subject: 'Chemistry', dateTime: 'Sep 22, 2026', time: '10:00 AM – 11:30 AM', venue: 'Room 202', supervisor: 'Prof. Amit Verma', maxMarks: 50, passMarks: 17, enrolled: 9, status: 'Completed' }
   ];
 
   const filteredExamsRows = useMemo(() => {
@@ -481,12 +505,12 @@ export const AveriqMasterReportsHub: React.FC = () => {
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">₹ 32.4L</span>
+            <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">₹ 8.91L</span>
             <span className="inline-flex items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">
-              66.5% Recovery
+              91.4% Recovery
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Pending: ₹ 16,34,500 due</p>
+          <p className="text-[11px] text-slate-400 mt-1">Pending: ₹ 84,000 due (24 students)</p>
         </div>
 
         {/* KPI 3: Academic Results */}
@@ -498,13 +522,15 @@ export const AveriqMasterReportsHub: React.FC = () => {
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-purple-600 dark:text-purple-400 font-mono">85.6%</span>
+            <span className="text-3xl font-black text-purple-600 dark:text-purple-400 font-mono">
+              {resultsStudentRows.length > 0 ? ((resultsPassedCount / resultsStudentRows.length) * 100).toFixed(1) : 0}%
+            </span>
             <span className="inline-flex items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
               <ArrowUpRight className="w-3 h-3 mr-0.5" />
               +3.2%
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">Mean Score: 76% (1,062 passed)</p>
+          <p className="text-[11px] text-slate-400 mt-1">Mean Score: 78% ({resultsPassedCount} / {resultsStudentRows.length} passed)</p>
         </div>
 
         {/* KPI 4: Examination Audits */}
@@ -870,7 +896,7 @@ export const AveriqMasterReportsHub: React.FC = () => {
                   <h3 className="font-bold text-sm text-slate-900 dark:text-white">Overall Grade Distribution Matrix</h3>
                   <p className="text-xs text-slate-500">Student performance tiers across consolidated board exams</p>
                 </div>
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 font-mono">1,240 Cohort</span>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 font-mono">{academicStudents.length} Cohort</span>
               </div>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">

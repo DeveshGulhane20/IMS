@@ -22,7 +22,9 @@ import {
   CheckCircle,
   FileText,
   ShieldCheck,
-  Briefcase
+  Briefcase,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -109,6 +111,71 @@ export const AveriqAttendanceAnalytics: React.FC = () => {
       percentage: 93
     }
   ]);
+
+  // Session Edit & Delete Modal States
+  const [isEditSessionModalOpen, setIsEditSessionModalOpen] = useState(false);
+  const [isDeleteSessionModalOpen, setIsDeleteSessionModalOpen] = useState(false);
+  const [sessionToEdit, setSessionToEdit] = useState<SavedSessionLog | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<SavedSessionLog | null>(null);
+  const [editSessionForm, setEditSessionForm] = useState({
+    present: 0,
+    absent: 0,
+    late: 0,
+    time: '',
+    teacherName: ''
+  });
+
+  const handleOpenEditSession = (session: SavedSessionLog) => {
+    setSessionToEdit(session);
+    setEditSessionForm({
+      present: session.present,
+      absent: session.absent,
+      late: session.late,
+      time: session.time,
+      teacherName: session.teacherName
+    });
+    setIsEditSessionModalOpen(true);
+  };
+
+  const handleSaveEditSession = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sessionToEdit) return;
+    const total = editSessionForm.present + editSessionForm.absent;
+    const pct = total > 0 ? Math.round((editSessionForm.present / total) * 100) : 0;
+
+    setRecentSavedSessions(prev =>
+      prev.map(s =>
+        s.id === sessionToEdit.id
+          ? {
+              ...s,
+              present: Number(editSessionForm.present),
+              absent: Number(editSessionForm.absent),
+              late: Number(editSessionForm.late),
+              total,
+              percentage: pct,
+              time: editSessionForm.time,
+              teacherName: editSessionForm.teacherName
+            }
+          : s
+      )
+    );
+    setIsEditSessionModalOpen(false);
+    showToast(`Updated attendance log for ${sessionToEdit.className} (${pct}% attendance).`);
+    setSessionToEdit(null);
+  };
+
+  const handleOpenDeleteSession = (session: SavedSessionLog) => {
+    setSessionToDelete(session);
+    setIsDeleteSessionModalOpen(true);
+  };
+
+  const handleConfirmDeleteSession = () => {
+    if (!sessionToDelete) return;
+    setRecentSavedSessions(prev => prev.filter(s => s.id !== sessionToDelete.id));
+    setIsDeleteSessionModalOpen(false);
+    showToast(`Cleared session attendance log for ${sessionToDelete.className}.`);
+    setSessionToDelete(null);
+  };
 
   const currentDateFormatted = useMemo(() => {
     return new Date().toLocaleDateString('en-US', {
@@ -1128,15 +1195,36 @@ export const AveriqAttendanceAnalytics: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <div className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold">
-                    {session.present} Present • {session.absent} Absent
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold">
+                      {session.present} Present • {session.absent} Absent
+                    </div>
+                    {session.late > 0 && (
+                      <span className="text-[10px] text-amber-500 font-medium">
+                        {session.late} Late Entry
+                      </span>
+                    )}
                   </div>
-                  {session.late > 0 && (
-                    <span className="text-[10px] text-amber-500 font-medium">
-                      {session.late} Late Entry
-                    </span>
-                  )}
+
+                  <div className="flex items-center gap-1 border-l border-slate-200 dark:border-slate-700 pl-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditSession(session)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      title="Edit Session Attendance"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDeleteSession(session)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                      title="Clear Session Log"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1257,6 +1345,152 @@ export const AveriqAttendanceAnalytics: React.FC = () => {
           </table>
         </div>
       </div>
+      {/* =========================================================================
+          MODAL: EDIT SESSION RECORD
+          ========================================================================= */}
+      {isEditSessionModalOpen && sessionToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Edit Attendance Record</h3>
+                  <span className="text-xs text-slate-400">{sessionToEdit.className} • {sessionToEdit.date}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditSessionModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditSession} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Present Count</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editSessionForm.present}
+                    onChange={e => setEditSessionForm({ ...editSessionForm, present: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Absent Count</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editSessionForm.absent}
+                    onChange={e => setEditSessionForm({ ...editSessionForm, absent: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Late Arrivals</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editSessionForm.late}
+                    onChange={e => setEditSessionForm({ ...editSessionForm, late: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Recorded Time</label>
+                  <input
+                    type="text"
+                    required
+                    value={editSessionForm.time}
+                    onChange={e => setEditSessionForm({ ...editSessionForm, time: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  {sessionToEdit.isFaculty ? 'Approved Evaluator' : 'Class Faculty Mentor'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editSessionForm.teacherName}
+                  onChange={e => setEditSessionForm({ ...editSessionForm, teacherName: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditSessionModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer"
+                >
+                  Save Record
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL: DELETE SESSION CONFIRMATION
+          ========================================================================= */}
+      {isDeleteSessionModalOpen && sessionToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Clear Attendance Session?</h3>
+                <span className="text-xs text-slate-400">Confirmation Required</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to clear the verified attendance log for <strong>{sessionToDelete.className}</strong> from {sessionToDelete.date} ({sessionToDelete.time})?
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setIsDeleteSessionModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium cursor-pointer"
+              >
+                Keep Log
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteSession}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer"
+              >
+                Yes, Clear Log
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

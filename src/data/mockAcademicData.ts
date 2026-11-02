@@ -52,7 +52,12 @@ export const academicTeachers: DetailedTeacher[] = [
         { date: 'Oct 27, 2026', checkIn: '08:42 AM', checkOut: '04:45 PM', status: 'LATE', shift: 'Morning Shift' },
         { date: 'Oct 26, 2026', checkIn: '08:15 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
       ]
-    }
+    },
+    assignedClassesWithSubjects: [
+      { classId: 'cls-10a-cbse', className: 'Class 10A – Science & Math Honors', subjectName: 'Mathematics Standard', board: 'CBSE', gradeLevel: '10th Standard', hoursPerWeek: 6 },
+      { classId: 'cls-10b-icse', className: 'Class 10B – ICSE Board Aspirants', subjectName: 'Mathematics', board: 'ICSE', gradeLevel: '10th Standard', hoursPerWeek: 6 },
+      { classId: 'cls-9a-cbse', className: 'Class 9A – Secondary Scholars', subjectName: 'Mathematics', board: 'CBSE', gradeLevel: '9th Standard', hoursPerWeek: 6 }
+    ]
   },
   {
     id: 'tea-002',
@@ -95,7 +100,12 @@ export const academicTeachers: DetailedTeacher[] = [
         { date: 'Oct 27, 2026', checkIn: '08:15 AM', checkOut: '04:35 PM', status: 'ON_TIME', shift: 'Morning Shift' },
         { date: 'Oct 26, 2026', checkIn: '08:16 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
       ]
-    }
+    },
+    assignedClassesWithSubjects: [
+      { classId: 'cls-10b-icse', className: 'Class 10B – ICSE Board Aspirants', subjectName: 'Physics', board: 'ICSE', gradeLevel: '10th Standard', hoursPerWeek: 6 },
+      { classId: 'cls-11sci-pcm', className: 'Class 11 Science – Engineering Stream (PCM)', subjectName: 'Physics', board: 'CBSE', gradeLevel: '11th Standard', hoursPerWeek: 6 },
+      { classId: 'cls-10a-cbse', className: 'Class 10A – Science & Math Honors', subjectName: 'Science (Physics, Chemistry, Biology)', board: 'CBSE', gradeLevel: '10th Standard', hoursPerWeek: 6 }
+    ]
   },
   {
     id: 'tea-003',
@@ -138,7 +148,12 @@ export const academicTeachers: DetailedTeacher[] = [
         { date: 'Oct 27, 2026', checkIn: '08:40 AM', checkOut: '04:40 PM', status: 'LATE', shift: 'Morning Shift' },
         { date: 'Oct 26, 2026', checkIn: '08:23 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
       ]
-    }
+    },
+    assignedClassesWithSubjects: [
+      { classId: 'cls-10b-icse', className: 'Class 10B – ICSE Board Aspirants', subjectName: 'Chemistry', board: 'ICSE', gradeLevel: '10th Standard', hoursPerWeek: 6 },
+      { classId: 'cls-12sci-pcb', className: 'Class 12 Science – Medical Stream (PCB)', subjectName: 'Chemistry', board: 'CBSE', gradeLevel: '12th Standard', hoursPerWeek: 6 },
+      { classId: 'cls-10c-state', className: 'Class 10C – State SSC Matriculation', subjectName: 'Science & Technology (Part 1 & 2)', board: 'State Board', gradeLevel: '10th Standard', hoursPerWeek: 6 }
+    ]
   },
   {
     id: 'tea-004',
@@ -181,7 +196,13 @@ export const academicTeachers: DetailedTeacher[] = [
         { date: 'Oct 27, 2026', checkIn: '08:16 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
         { date: 'Oct 26, 2026', checkIn: '08:15 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
       ]
-    }
+    },
+    assignedClassesWithSubjects: [
+      { classId: 'cls-10b-icse', className: 'Class 10B – ICSE Board Aspirants', subjectName: 'English Language', board: 'ICSE', gradeLevel: '10th Standard', hoursPerWeek: 5 },
+      { classId: 'cls-10b-icse', className: 'Class 10B – ICSE Board Aspirants', subjectName: 'English Literature', board: 'ICSE', gradeLevel: '10th Standard', hoursPerWeek: 5 },
+      { classId: 'cls-10a-cbse', className: 'Class 10A – Science & Math Honors', subjectName: 'English Language & Literature', board: 'CBSE', gradeLevel: '10th Standard', hoursPerWeek: 5 },
+      { classId: 'cls-9a-cbse', className: 'Class 9A – Secondary Scholars', subjectName: 'English Language', board: 'CBSE', gradeLevel: '9th Standard', hoursPerWeek: 5 }
+    ]
   },
   {
     id: 'tea-005',
@@ -224,7 +245,12 @@ export const academicTeachers: DetailedTeacher[] = [
         { date: 'Oct 27, 2026', checkIn: '08:20 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' },
         { date: 'Oct 26, 2026', checkIn: '08:22 AM', checkOut: '04:30 PM', status: 'ON_TIME', shift: 'Morning Shift' }
       ]
-    }
+    },
+    assignedClassesWithSubjects: [
+      { classId: 'cls-10b-icse', className: 'Class 10B – ICSE Board Aspirants', subjectName: 'Biology', board: 'ICSE', gradeLevel: '10th Standard', hoursPerWeek: 5 },
+      { classId: 'cls-12sci-pcb', className: 'Class 12 Science – Medical Stream (PCB)', subjectName: 'Biology (Botany & Zoology)', board: 'CBSE', gradeLevel: '12th Standard', hoursPerWeek: 6 },
+      { classId: 'cls-8a-cbse', className: 'Class 8A – Middle Foundation', subjectName: 'General Science', board: 'CBSE', gradeLevel: '8th Standard', hoursPerWeek: 5 }
+    ]
   }
 ];
 
@@ -275,7 +301,7 @@ function generateAcademicData() {
     let batchName = 'Science Batch 2025-26';
     let batchId = 'batch-10a';
 
-    if (i > 44 || i === 15) {
+    if (i > 44) {
       gradeLevel = 'Class 8';
       section = 'A';
       batchName = 'Class 8 | Batch: General 2025-26';
@@ -292,12 +318,18 @@ function generateAcademicData() {
       batchId = 'batch-10b';
     }
 
-    const rollNumber = `${gradeLevel.replace('Class ', '')}${section}-${i.toString().padStart(2, '0')}`;
+    const rollNumber = i <= 20
+      ? `10A-${i.toString().padStart(2, '0')}`
+      : i <= 35
+      ? `10B-${(i - 20).toString().padStart(2, '0')}`
+      : i <= 44
+      ? `9A-${(i - 35).toString().padStart(2, '0')}`
+      : `8A-${(i - 44).toString().padStart(2, '0')}`;
     const bloodGroups = ['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-'];
     const bloodGroup = bloodGroups[i % bloodGroups.length];
 
-    const fatherName = (i === 1 || i === 15) ? 'Mr. Rajesh Sharma' : `Mr. ${lastNames[(i + 3) % lastNames.length]} ${ln}`;
-    const motherName = (i === 1 || i === 15) ? 'Mrs. Sunita Sharma' : `Mrs. Anita ${ln}`;
+    const fatherName = (i === 1) ? 'Mr. Rajesh Sharma' : `Mr. ${lastNames[(i + 3) % lastNames.length]} ${ln}`;
+    const motherName = (i === 1) ? 'Mrs. Sunita Sharma' : `Mrs. Anita ${ln}`;
     const parentName = `${fatherName} & ${motherName}`;
     const parentOccupation = occupations[i % occupations.length];
     const parentPhone = `+91 98${(25000000 + i * 1111).toString().slice(0, 8)}`;

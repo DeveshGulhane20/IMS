@@ -142,6 +142,14 @@ export interface DetailedTeacher {
   totalStudentsTaught: number;
   avatarBg: string;
   attendance?: TeacherAttendanceRecord;
+  assignedClassesWithSubjects?: Array<{
+    classId: string;
+    className: string;
+    subjectName: string;
+    board: string;
+    gradeLevel: string;
+    hoursPerWeek?: number;
+  }>;
 }
 
 export interface DetailedParent {

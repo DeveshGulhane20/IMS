@@ -21,7 +21,9 @@ import {
   BookOpen,
   ChevronRight,
   TrendingUp,
-  RotateCcw
+  RotateCcw,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { HomeworkService, ClassHomework } from '../../services/homeworkService';
 import { academicStudents, academicTeachers } from '../../data/mockAcademicData';
@@ -65,6 +67,19 @@ export const AveriqHomeworkModule: React.FC = () => {
     teacherName: academicTeachers[0]?.name || 'Prof. Rajesh Sharma',
     dueDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
     attachmentName: 'Assignment_Practice_Set.pdf'
+  });
+
+  // Edit / Delete Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [homeworkToEdit, setHomeworkToEdit] = useState<ClassHomework | null>(null);
+  const [homeworkToDelete, setHomeworkToDelete] = useState<ClassHomework | null>(null);
+  const [editHwForm, setEditHwForm] = useState({
+    title: '',
+    description: '',
+    subject: 'Mathematics',
+    dueDate: '',
+    status: 'ACTIVE' as 'ACTIVE' | 'COMPLETED' | 'OVERDUE'
   });
 
   // Success Toast notification
@@ -199,6 +214,58 @@ export const AveriqHomeworkModule: React.FC = () => {
     }
   };
 
+  const handleOpenEdit = (hw: ClassHomework, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setHomeworkToEdit(hw);
+    setEditHwForm({
+      title: hw.title,
+      description: hw.description,
+      subject: hw.subject,
+      dueDate: hw.dueDate,
+      status: hw.status
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!homeworkToEdit) return;
+    const updated = HomeworkService.updateHomework(homeworkToEdit.id, editHwForm);
+    if (updated) {
+      if (selectedHomework && selectedHomework.id === homeworkToEdit.id) {
+        setSelectedHomework(updated);
+      }
+      loadHomeworks();
+      const msg = `Homework "${editHwForm.title}" updated successfully.`;
+      setToastMessage(msg);
+      if (showToast) showToast(msg);
+      setTimeout(() => setToastMessage(null), 4000);
+    }
+    setIsEditModalOpen(false);
+    setHomeworkToEdit(null);
+  };
+
+  const handleOpenDelete = (hw: ClassHomework, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setHomeworkToDelete(hw);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!homeworkToDelete) return;
+    HomeworkService.deleteHomework(homeworkToDelete.id);
+    if (selectedHomework && selectedHomework.id === homeworkToDelete.id) {
+      setSelectedHomework(null);
+    }
+    loadHomeworks();
+    const msg = `Homework "${homeworkToDelete.title}" removed.`;
+    setToastMessage(msg);
+    if (showToast) showToast(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+    setIsDeleteModalOpen(false);
+    setHomeworkToDelete(null);
+  };
+
   // Subject theme color helper
   const getSubjectColor = (subject: string) => {
     switch (subject.toLowerCase()) {
@@ -286,6 +353,22 @@ export const AveriqHomeworkModule: React.FC = () => {
             <span className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700">
               Due: {selectedHomework.dueDate}
             </span>
+            <button
+              type="button"
+              onClick={() => handleOpenEdit(selectedHomework)}
+              className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              <span>Edit</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenDelete(selectedHomework)}
+              className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
+            </button>
           </div>
         </div>
 
@@ -704,15 +787,33 @@ export const AveriqHomeworkModule: React.FC = () => {
                     </span>
                   </div>
 
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    hw.status === 'COMPLETED'
-                      ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                      : hw.status === 'OVERDUE'
-                      ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
-                      : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                  }`}>
-                    {hw.status}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      hw.status === 'COMPLETED'
+                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                        : hw.status === 'OVERDUE'
+                        ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                        : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+                    }`}>
+                      {hw.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenEdit(hw, e)}
+                      title="Edit Assignment"
+                      className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenDelete(hw, e)}
+                      title="Delete Assignment"
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Title & Description */}
@@ -965,6 +1066,171 @@ export const AveriqHomeworkModule: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT HOMEWORK MODAL */}
+      {isEditModalOpen && homeworkToEdit && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Edit Homework Assignment
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {homeworkToEdit.className} • {homeworkToEdit.subject}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Assignment Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editHwForm.title}
+                  onChange={(e) => setEditHwForm({ ...editHwForm, title: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Subject *
+                  </label>
+                  <select
+                    value={editHwForm.subject}
+                    onChange={(e) => setEditHwForm({ ...editHwForm, subject: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  >
+                    {AVAILABLE_SUBJECTS.map(subj => (
+                      <option key={subj} value={subj}>{subj}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Status *
+                  </label>
+                  <select
+                    value={editHwForm.status}
+                    onChange={(e) => setEditHwForm({ ...editHwForm, status: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                    <option value="OVERDUE">OVERDUE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Submission Due Date *</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={editHwForm.dueDate}
+                  onChange={(e) => setEditHwForm({ ...editHwForm, dueDate: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Description & Instructions *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editHwForm.description}
+                  onChange={(e) => setEditHwForm({ ...editHwForm, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE HOMEWORK MODAL */}
+      {isDeleteModalOpen && homeworkToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-900/30">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Delete Assignment?</h3>
+                <span className="text-xs text-slate-400">{homeworkToDelete.className}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to permanently delete <span className="font-bold text-slate-900 dark:text-white">"{homeworkToDelete.title}"</span>?
+              All student submission records and evaluative grades will be removed.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setHomeworkToDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/30 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Assignment</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

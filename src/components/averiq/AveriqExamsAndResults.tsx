@@ -26,7 +26,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Check,
-  CalendarClock
+  CalendarClock,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -104,6 +106,163 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
   const [selectedExamDetails, setSelectedExamDetails] = useState<ExamItem | null>(null);
   const [selectedStudentScorecard, setSelectedStudentScorecard] = useState<StudentResultItem | null>(null);
 
+  // Exam Edit & Delete States
+  const [isEditExamModalOpen, setIsEditExamModalOpen] = useState(false);
+  const [isDeleteExamModalOpen, setIsDeleteExamModalOpen] = useState(false);
+  const [examToEdit, setExamToEdit] = useState<ExamItem | null>(null);
+  const [examToDelete, setExamToDelete] = useState<ExamItem | null>(null);
+  const [editExamForm, setEditExamForm] = useState({
+    name: '',
+    classGrade: 'Class 10A',
+    subject: 'Mathematics',
+    dateTime: '',
+    timeRange: '',
+    hall: '',
+    maxMarks: 50,
+    passingMarks: 17,
+    invigilator: '',
+    status: 'Upcoming' as 'Upcoming' | 'Ongoing' | 'Completed'
+  });
+
+  // Scorecard Edit & Delete States
+  const [isEditScorecardModalOpen, setIsEditScorecardModalOpen] = useState(false);
+  const [isDeleteResultModalOpen, setIsDeleteResultModalOpen] = useState(false);
+  const [resultToEdit, setResultToEdit] = useState<StudentResultItem | null>(null);
+  const [resultToDelete, setResultToDelete] = useState<StudentResultItem | null>(null);
+  const [editScorecardForm, setEditScorecardForm] = useState({
+    marksObtained: 0,
+    maxMarks: 50,
+    remarks: '',
+    gradeLetter: 'A',
+    status: 'Passed' as 'Passed' | 'Needs Improvement'
+  });
+
+  // Handlers for Exam Edit & Delete
+  const handleOpenEditExam = (exam: ExamItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExamToEdit(exam);
+    setEditExamForm({
+      name: exam.name,
+      classGrade: exam.classGrade,
+      subject: exam.subject,
+      dateTime: exam.dateTime,
+      timeRange: exam.timeRange,
+      hall: exam.hall,
+      maxMarks: exam.maxMarks,
+      passingMarks: exam.passingMarks,
+      invigilator: exam.invigilator,
+      status: exam.status
+    });
+    setIsEditExamModalOpen(true);
+  };
+
+  const handleSaveEditExam = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!examToEdit) return;
+    setExamsList(prev => prev.map(ex => ex.id === examToEdit.id ? {
+      ...ex,
+      name: editExamForm.name,
+      classGrade: editExamForm.classGrade,
+      subject: editExamForm.subject,
+      dateTime: editExamForm.dateTime,
+      timeRange: editExamForm.timeRange,
+      hall: editExamForm.hall,
+      maxMarks: Number(editExamForm.maxMarks),
+      passingMarks: Number(editExamForm.passingMarks),
+      invigilator: editExamForm.invigilator,
+      status: editExamForm.status
+    } : ex));
+    if (selectedExamDetails && selectedExamDetails.id === examToEdit.id) {
+      setSelectedExamDetails({ ...selectedExamDetails, ...editExamForm, maxMarks: Number(editExamForm.maxMarks), passingMarks: Number(editExamForm.passingMarks) });
+    }
+    setIsEditExamModalOpen(false);
+    showToast(`Updated examination parameters for ${editExamForm.name}.`);
+    setExamToEdit(null);
+  };
+
+  const handleOpenDeleteExam = (exam: ExamItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExamToDelete(exam);
+    setIsDeleteExamModalOpen(true);
+  };
+
+  const handleConfirmDeleteExam = () => {
+    if (!examToDelete) return;
+    setExamsList(prev => prev.filter(ex => ex.id !== examToDelete.id));
+    if (selectedExamDetails && selectedExamDetails.id === examToDelete.id) {
+      setSelectedExamDetails(null);
+    }
+    setIsDeleteExamModalOpen(false);
+    showToast(`Cancelled and removed examination: ${examToDelete.name}.`);
+    setExamToDelete(null);
+  };
+
+  // Handlers for Scorecard Edit & Delete
+  const handleOpenEditScorecard = (res: StudentResultItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setResultToEdit(res);
+    setEditScorecardForm({
+      marksObtained: res.marksObtained,
+      maxMarks: res.maxMarks,
+      remarks: res.remarks,
+      gradeLetter: res.gradeLetter,
+      status: res.status
+    });
+    setIsEditScorecardModalOpen(true);
+  };
+
+  const handleSaveEditScorecard = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resultToEdit) return;
+    const marks = Number(editScorecardForm.marksObtained);
+    const max = Number(editScorecardForm.maxMarks);
+    const pct = max > 0 ? Math.round((marks / max) * 100) : 0;
+    const computedStatus = pct >= 35 ? 'Passed' : 'Needs Improvement';
+
+    setRecentStudentResults(prev => prev.map(r => r.id === resultToEdit.id ? {
+      ...r,
+      marksObtained: marks,
+      maxMarks: max,
+      percentage: pct,
+      status: computedStatus as any,
+      gradeLetter: editScorecardForm.gradeLetter,
+      remarks: editScorecardForm.remarks
+    } : r));
+
+    if (selectedStudentScorecard && selectedStudentScorecard.id === resultToEdit.id) {
+      setSelectedStudentScorecard({
+        ...selectedStudentScorecard,
+        marksObtained: marks,
+        maxMarks: max,
+        percentage: pct,
+        status: computedStatus as any,
+        gradeLetter: editScorecardForm.gradeLetter,
+        remarks: editScorecardForm.remarks
+      });
+    }
+
+    setIsEditScorecardModalOpen(false);
+    showToast(`Updated scorecard for ${resultToEdit.studentName} (${marks}/${max} – ${pct}%).`);
+    setResultToEdit(null);
+  };
+
+  const handleOpenDeleteResult = (res: StudentResultItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setResultToDelete(res);
+    setIsDeleteResultModalOpen(true);
+  };
+
+  const handleConfirmDeleteResult = () => {
+    if (!resultToDelete) return;
+    setRecentStudentResults(prev => prev.filter(r => r.id !== resultToDelete.id));
+    if (selectedStudentScorecard && selectedStudentScorecard.id === resultToDelete.id) {
+      setSelectedStudentScorecard(null);
+    }
+    setIsDeleteResultModalOpen(false);
+    showToast(`Removed score record for ${resultToDelete.studentName} (${resultToDelete.subject}).`);
+    setResultToDelete(null);
+  };
+
   // Initial 12 Exams Dataset matching specifications:
   // 1 Upcoming, 8 Scheduled, 3 Completed = 12 Total Exams
   const [examsList, setExamsList] = useState<ExamItem[]>([
@@ -119,7 +278,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 17,
       invigilator: 'Prof. Rajesh Sharma',
       status: 'Upcoming',
-      totalEnrolled: 45
+      totalEnrolled: 20
     },
     {
       id: 'ex-02',
@@ -133,7 +292,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 14,
       invigilator: 'Dr. Neha Kulkarni',
       status: 'Upcoming',
-      totalEnrolled: 42
+      totalEnrolled: 15
     },
     {
       id: 'ex-03',
@@ -147,7 +306,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 14,
       invigilator: 'Prof. Amit Verma',
       status: 'Upcoming',
-      totalEnrolled: 40
+      totalEnrolled: 9
     },
     {
       id: 'ex-04',
@@ -161,7 +320,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 18,
       invigilator: 'Mrs. Sunita Rao',
       status: 'Upcoming',
-      totalEnrolled: 38
+      totalEnrolled: 6
     },
     {
       id: 'ex-05',
@@ -175,7 +334,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 17,
       invigilator: 'Dr. Anand Joshi',
       status: 'Upcoming',
-      totalEnrolled: 45
+      totalEnrolled: 20
     },
     {
       id: 'ex-06',
@@ -189,7 +348,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 14,
       invigilator: 'Prof. Amit Verma',
       status: 'Upcoming',
-      totalEnrolled: 40
+      totalEnrolled: 9
     },
     {
       id: 'ex-07',
@@ -203,7 +362,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 20,
       invigilator: 'Prof. Vikram Sen',
       status: 'Upcoming',
-      totalEnrolled: 42
+      totalEnrolled: 15
     },
     {
       id: 'ex-08',
@@ -217,7 +376,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 17,
       invigilator: 'Prof. Rajesh Sharma',
       status: 'Upcoming',
-      totalEnrolled: 45
+      totalEnrolled: 20
     },
     {
       id: 'ex-09',
@@ -231,7 +390,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 11,
       invigilator: 'Dr. Neha Kulkarni',
       status: 'Ongoing',
-      totalEnrolled: 40
+      totalEnrolled: 9
     },
     {
       id: 'ex-10',
@@ -245,7 +404,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 33,
       invigilator: 'Prof. Rajesh Sharma',
       status: 'Completed',
-      totalEnrolled: 45
+      totalEnrolled: 20
     },
     {
       id: 'ex-11',
@@ -259,7 +418,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 27,
       invigilator: 'Dr. Neha Kulkarni',
       status: 'Completed',
-      totalEnrolled: 42
+      totalEnrolled: 15
     },
     {
       id: 'ex-12',
@@ -273,7 +432,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
       passingMarks: 17,
       invigilator: 'Prof. Amit Verma',
       status: 'Completed',
-      totalEnrolled: 40
+      totalEnrolled: 9
     }
   ]);
 
@@ -391,202 +550,42 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
   const [resultsSubjectFilter, setResultsSubjectFilter] = useState('All');
   const [resultsStatusFilter, setResultsStatusFilter] = useState('All');
 
-  const recentStudentResults: StudentResultItem[] = useMemo(() => {
-    return [
-      {
-        id: 'res-01',
-        studentId: 'STU-1001',
-        studentName: 'Rohan Sharma',
-        avatarBg: 'bg-blue-600',
-        classGrade: 'Class 10A',
-        subject: 'Mathematics',
-        marksObtained: 48,
+  // Seeded dynamically from the unified 50-student master pool
+  const [recentStudentResults, setRecentStudentResults] = useState<StudentResultItem[]>(() => {
+    return academicStudents.map((st, idx) => {
+      const sem = st.semesters?.sem1;
+      const pct = sem ? sem.percentage : (70 + (idx % 25));
+      const marks = Math.round((pct / 100) * 50);
+      const isPassed = pct >= 50;
+      let grade = 'B';
+      if (pct >= 90) grade = 'A+';
+      else if (pct >= 80) grade = 'A';
+      else if (pct >= 70) grade = 'B+';
+      else if (pct >= 60) grade = 'B';
+      else if (pct >= 50) grade = 'C';
+      else grade = 'Below C';
+
+      const subjectList = ['Mathematics', 'Physics', 'Chemistry', 'English', 'Social Science'];
+      const subj = subjectList[idx % subjectList.length];
+
+      return {
+        id: `res-${st.id}`,
+        studentId: st.studentCode,
+        studentName: st.name,
+        avatarBg: st.gender === 'MALE' ? 'bg-blue-600' : 'bg-rose-600',
+        classGrade: st.gradeLevel === 'Class 10' ? (st.section === 'A' ? 'Class 10A' : 'Class 10B') : st.gradeLevel === 'Class 9' ? 'Class 9A' : 'Class 8A',
+        subject: subj,
+        marksObtained: marks,
         maxMarks: 50,
-        percentage: 96,
-        status: 'Passed',
+        percentage: pct,
+        status: isPassed ? 'Passed' : 'Needs Improvement',
         resultDate: 'Oct 28, 2026',
         examName: 'Pre-Board Mock 1',
-        gradeLetter: 'A+',
-        remarks: 'Exceptional mastery in Quadratic Equations and Calculus.'
-      },
-      {
-        id: 'res-02',
-        studentId: 'STU-1002',
-        studentName: 'Priya Patel',
-        avatarBg: 'bg-emerald-600',
-        classGrade: 'Class 10A',
-        subject: 'Physics',
-        marksObtained: 47,
-        maxMarks: 50,
-        percentage: 94,
-        status: 'Passed',
-        resultDate: 'Oct 28, 2026',
-        examName: 'Optics & Circuit Diagnostic',
-        gradeLetter: 'A+',
-        remarks: 'Clear conceptual understanding and pristine ray diagram presentation.'
-      },
-      {
-        id: 'res-03',
-        studentId: 'STU-1003',
-        studentName: 'Aarav Verma',
-        avatarBg: 'bg-amber-600',
-        classGrade: 'Class 10B',
-        subject: 'Chemistry',
-        marksObtained: 44,
-        maxMarks: 50,
-        percentage: 88,
-        status: 'Passed',
-        resultDate: 'Oct 27, 2026',
-        examName: 'Organic Reaction Sequences',
-        gradeLetter: 'A',
-        remarks: 'Strong nomenclature and mechanism grasp; minor arithmetic slip.'
-      },
-      {
-        id: 'res-04',
-        studentId: 'STU-1004',
-        studentName: 'Ananya Deshmukh',
-        avatarBg: 'bg-purple-600',
-        classGrade: 'Class 9A',
-        subject: 'Mathematics',
-        marksObtained: 49,
-        maxMarks: 50,
-        percentage: 98,
-        status: 'Passed',
-        resultDate: 'Oct 27, 2026',
-        examName: 'Algebra & Polynomials Unit Test',
-        gradeLetter: 'A+',
-        remarks: 'Batch topper with zero algebraic calculation defects.'
-      },
-      {
-        id: 'res-05',
-        studentId: 'STU-1005',
-        studentName: 'Vikramaditya Rao',
-        avatarBg: 'bg-indigo-600',
-        classGrade: 'Class 10A',
-        subject: 'English',
-        marksObtained: 46,
-        maxMarks: 50,
-        percentage: 92,
-        status: 'Passed',
-        resultDate: 'Oct 26, 2026',
-        examName: 'Language & Critical Essays',
-        gradeLetter: 'A+',
-        remarks: 'Articulate phrasing, great vocabulary, and coherent structure.'
-      },
-      {
-        id: 'res-06',
-        studentId: 'STU-1006',
-        studentName: 'Kunal Singhania',
-        avatarBg: 'bg-rose-600',
-        classGrade: 'Class 10B',
-        subject: 'Mathematics',
-        marksObtained: 18,
-        maxMarks: 50,
-        percentage: 36,
-        status: 'Needs Improvement',
-        resultDate: 'Oct 26, 2026',
-        examName: 'Pre-Board Mock 1',
-        gradeLetter: 'Below C',
-        remarks: 'Struggling with quadratic formulas and word problems. Recommended for remedial bootcamp.'
-      },
-      {
-        id: 'res-07',
-        studentId: 'STU-1007',
-        studentName: 'Sneha Kulkarni',
-        avatarBg: 'bg-teal-600',
-        classGrade: 'Class 9A',
-        subject: 'Physics',
-        marksObtained: 41,
-        maxMarks: 50,
-        percentage: 82,
-        status: 'Passed',
-        resultDate: 'Oct 25, 2026',
-        examName: 'Motion & Laws of Friction',
-        gradeLetter: 'A',
-        remarks: 'Good progress; improve speed during numerical evaluations.'
-      },
-      {
-        id: 'res-08',
-        studentId: 'STU-1008',
-        studentName: 'Devansh Joshi',
-        avatarBg: 'bg-cyan-600',
-        classGrade: 'Class 8A',
-        subject: 'English',
-        marksObtained: 38,
-        maxMarks: 50,
-        percentage: 76,
-        status: 'Passed',
-        resultDate: 'Oct 25, 2026',
-        examName: 'Grammar and Comprehension',
-        gradeLetter: 'B+',
-        remarks: 'Solid reading comprehension; revise tenses and passive voice.'
-      },
-      {
-        id: 'res-09',
-        studentId: 'STU-1009',
-        studentName: 'Meera Nambiar',
-        avatarBg: 'bg-pink-600',
-        classGrade: 'Class 10A',
-        subject: 'Biology',
-        marksObtained: 47,
-        maxMarks: 50,
-        percentage: 94,
-        status: 'Passed',
-        resultDate: 'Oct 24, 2026',
-        examName: 'Life Processes & Genetics Test',
-        gradeLetter: 'A+',
-        remarks: 'Flawless diagrams, labeling, and thorough explanations.'
-      },
-      {
-        id: 'res-10',
-        studentId: 'STU-1010',
-        studentName: 'Aditya Chopra',
-        avatarBg: 'bg-orange-600',
-        classGrade: 'Class 10B',
-        subject: 'Physics',
-        marksObtained: 21,
-        maxMarks: 50,
-        percentage: 42,
-        status: 'Needs Improvement',
-        resultDate: 'Oct 24, 2026',
-        examName: 'Optics & Circuit Diagnostic',
-        gradeLetter: 'Below C',
-        remarks: 'Formula misapplications on circuit laws. Assigned mentor support.'
-      },
-      {
-        id: 'res-11',
-        studentId: 'STU-1011',
-        studentName: 'Ishaan Trivedi',
-        avatarBg: 'bg-violet-600',
-        classGrade: 'Class 8A',
-        subject: 'Social Science',
-        marksObtained: 43,
-        maxMarks: 50,
-        percentage: 86,
-        status: 'Passed',
-        resultDate: 'Oct 23, 2026',
-        examName: 'Civics and Constitution Mid-Term',
-        gradeLetter: 'A',
-        remarks: 'Well-researched answers and clear historical timeline citations.'
-      },
-      {
-        id: 'res-12',
-        studentId: 'STU-1012',
-        studentName: 'Rhea Sengupta',
-        avatarBg: 'bg-emerald-700',
-        classGrade: 'Class 9A',
-        subject: 'Chemistry',
-        marksObtained: 45,
-        maxMarks: 50,
-        percentage: 90,
-        status: 'Passed',
-        resultDate: 'Oct 22, 2026',
-        examName: 'Acids, Bases and Salts Quiz',
-        gradeLetter: 'A+',
-        remarks: 'Excellent clarity on chemical equation balancing.'
-      }
-    ];
-  }, []);
+        gradeLetter: grade,
+        remarks: isPassed ? 'Consistently high conceptual comprehension and problem-solving.' : 'Needs remedial attention on foundational concepts.'
+      };
+    });
+  });
 
   const filteredResults = useMemo(() => {
     return recentStudentResults.filter(item => {
@@ -602,15 +601,53 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
     });
   }, [recentStudentResults, resultsSearch, resultsClassFilter, resultsSubjectFilter, resultsStatusFilter]);
 
-  // Overall Grade Distribution Data (A+, A, B+, B, C, Below C) for 1,240 students
-  const gradeDistributionData = [
-    { grade: 'A+', label: 'A+ (90-100%)', count: 284, percentage: 22.9, color: '#10B981', desc: 'Distinction' },
-    { grade: 'A', label: 'A (80-89%)', count: 392, percentage: 31.6, color: '#0056D6', desc: 'Very Good' },
-    { grade: 'B+', label: 'B+ (70-79%)', count: 248, percentage: 20.0, color: '#7C3AED', desc: 'Good' },
-    { grade: 'B', label: 'B (60-69%)', count: 138, percentage: 11.1, color: '#F59E0B', desc: 'Satisfactory' },
-    { grade: 'C', label: 'C (50-59%)', count: 96, percentage: 7.7, color: '#FB923C', desc: 'Average' },
-    { grade: 'Below C', label: 'Below C (<50%)', count: 82, percentage: 6.6, color: '#EF4444', desc: 'Needs Support' }
-  ];
+  // Dynamic KPI Metrics computed from 50 master students
+  const { totalStudentsCount, passedCount, failedCount, passPercentage, failPercentage, avgMarks } = useMemo(() => {
+    const total = recentStudentResults.length;
+    const passed = recentStudentResults.filter(r => r.status === 'Passed').length;
+    const failed = total - passed;
+    const passPct = total > 0 ? Number(((passed / total) * 100).toFixed(1)) : 0;
+    const failPct = total > 0 ? Number(((failed / total) * 100).toFixed(1)) : 0;
+    const totalMarksPct = recentStudentResults.reduce((acc, r) => acc + r.percentage, 0);
+    const avg = total > 0 ? Math.round(totalMarksPct / total) : 0;
+    return {
+      totalStudentsCount: total,
+      passedCount: passed,
+      failedCount: failed,
+      passPercentage: passPct,
+      failPercentage: failPct,
+      avgMarks: avg
+    };
+  }, [recentStudentResults]);
+
+  // Overall Grade Distribution Data dynamically summing exactly to total students (50)
+  const gradeDistributionData = useMemo(() => {
+    const total = recentStudentResults.length || 1;
+    const gradeCounts: Record<string, number> = {
+      'A+': 0,
+      'A': 0,
+      'B+': 0,
+      'B': 0,
+      'C': 0,
+      'Below C': 0
+    };
+    recentStudentResults.forEach(r => {
+      if (gradeCounts[r.gradeLetter] !== undefined) {
+        gradeCounts[r.gradeLetter]++;
+      } else {
+        gradeCounts['Below C']++;
+      }
+    });
+
+    return [
+      { grade: 'A+', label: 'A+ (90-100%)', count: gradeCounts['A+'], percentage: Number(((gradeCounts['A+'] / total) * 100).toFixed(1)), color: '#10B981', desc: 'Distinction' },
+      { grade: 'A', label: 'A (80-89%)', count: gradeCounts['A'], percentage: Number(((gradeCounts['A'] / total) * 100).toFixed(1)), color: '#0056D6', desc: 'Very Good' },
+      { grade: 'B+', label: 'B+ (70-79%)', count: gradeCounts['B+'], percentage: Number(((gradeCounts['B+'] / total) * 100).toFixed(1)), color: '#7C3AED', desc: 'Good' },
+      { grade: 'B', label: 'B (60-69%)', count: gradeCounts['B'], percentage: Number(((gradeCounts['B'] / total) * 100).toFixed(1)), color: '#F59E0B', desc: 'Satisfactory' },
+      { grade: 'C', label: 'C (50-59%)', count: gradeCounts['C'], percentage: Number(((gradeCounts['C'] / total) * 100).toFixed(1)), color: '#FB923C', desc: 'Average' },
+      { grade: 'Below C', label: 'Below C (<50%)', count: gradeCounts['Below C'], percentage: Number(((gradeCounts['Below C'] / total) * 100).toFixed(1)), color: '#EF4444', desc: 'Needs Support' }
+    ];
+  }, [recentStudentResults]);
 
   // Overall Performance Trend Line Graph Data across months
   const performanceTrendData = [
@@ -626,7 +663,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
   const subjectPerformanceData = [
     {
       subject: 'Mathematics',
-      enrolled: 1240,
+      enrolled: 50,
       avgMarks: 74.8,
       passRate: 84.2,
       topScore: '99/100',
@@ -635,7 +672,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
     },
     {
       subject: 'Physics',
-      enrolled: 1240,
+      enrolled: 50,
       avgMarks: 76.5,
       passRate: 86.8,
       topScore: '100/100',
@@ -644,7 +681,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
     },
     {
       subject: 'Chemistry',
-      enrolled: 1240,
+      enrolled: 50,
       avgMarks: 78.2,
       passRate: 89.1,
       topScore: '98/100',
@@ -653,7 +690,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
     },
     {
       subject: 'English',
-      enrolled: 1240,
+      enrolled: 50,
       avgMarks: 81.4,
       passRate: 92.5,
       topScore: '98/100',
@@ -662,7 +699,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
     },
     {
       subject: 'Biology / Life Science',
-      enrolled: 780,
+      enrolled: 35,
       avgMarks: 79.6,
       passRate: 88.4,
       topScore: '97/100',
@@ -671,7 +708,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
     },
     {
       subject: 'Social Science & History',
-      enrolled: 960,
+      enrolled: 50,
       avgMarks: 77.0,
       passRate: 87.0,
       topScore: '96/100',
@@ -680,46 +717,46 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
     }
   ];
 
-  // Top Performing Classes Ranking
+  // Top Performing Classes Ranking (Exact class breakdown totaling 50)
   const topClassesRanking = [
     {
       rank: 1,
       name: 'Class 10A',
       mentor: 'Prof. Rajesh Sharma',
-      studentsCount: 320,
+      studentsCount: 20,
       avgMarks: 82.4,
-      passRate: 94.2,
-      distinctions: 98,
+      passRate: 95.0,
+      distinctions: 12,
       badge: 'Premier Batch'
     },
     {
       rank: 2,
       name: 'Class 10B',
       mentor: 'Dr. Neha Kulkarni',
-      studentsCount: 310,
+      studentsCount: 15,
       avgMarks: 78.6,
-      passRate: 88.0,
-      distinctions: 82,
+      passRate: 93.3,
+      distinctions: 8,
       badge: 'Honor Roll'
     },
     {
       rank: 3,
       name: 'Class 9A',
       mentor: 'Prof. Amit Verma',
-      studentsCount: 305,
+      studentsCount: 9,
       avgMarks: 75.1,
-      passRate: 85.5,
-      distinctions: 64,
+      passRate: 88.9,
+      distinctions: 4,
       badge: 'Rising Star'
     },
     {
       rank: 4,
       name: 'Class 8A',
       mentor: 'Mrs. Sunita Rao',
-      studentsCount: 305,
+      studentsCount: 6,
       avgMarks: 73.9,
-      passRate: 82.0,
-      distinctions: 48,
+      passRate: 83.3,
+      distinctions: 2,
       badge: 'Consistent'
     }
   ];
@@ -729,7 +766,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
   };
 
   const handleExportResultsCSV = () => {
-    showToast('Exporting Academic Results & Grade Matrix (CSV) for 1,240 students.');
+    showToast(`Exporting Academic Results & Grade Matrix (CSV) for ${recentStudentResults.length} students.`);
   };
 
   const handleDownloadScorecardPDF = (name: string) => {
@@ -1221,6 +1258,22 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
                           </button>
                           <button
                             type="button"
+                            onClick={(e) => handleOpenEditExam(item, e)}
+                            className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            title="Edit / Reschedule Exam"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenDeleteExam(item, e)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            title="Cancel / Delete Exam"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => showToast(`Hall ticket & seating chart downloaded for ${item.name}`)}
                             className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                             title="Download Hall Ticket / Seating"
@@ -1374,7 +1427,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
             )}
           </div>
 
-          {/* 4 Summary Cards: Total Students (1,240), Passed (1,062 / 85.6%), Failed (178 / 14.4%), Avg. Marks (76%) */}
+          {/* 4 Summary Cards: Dynamic metrics from 50 master students */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Students */}
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs relative overflow-hidden">
@@ -1386,7 +1439,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-3xl font-black text-slate-900 dark:text-white font-mono">
-                  1,240
+                  {totalStudentsCount}
                 </span>
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   Enrolled
@@ -1405,10 +1458,10 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                  1,062
+                  {passedCount}
                 </span>
                 <span className="inline-flex items-center text-[11px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
-                  85.6%
+                  {passPercentage}%
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">+3.2% growth over prior semester</p>
@@ -1424,10 +1477,10 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-3xl font-black text-rose-600 dark:text-rose-400 font-mono">
-                  178
+                  {failedCount}
                 </span>
                 <span className="inline-flex items-center text-[11px] font-extrabold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-md">
-                  14.4%
+                  {failPercentage}%
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">Enrolled in evening mentor clinics</p>
@@ -1443,7 +1496,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-3xl font-black text-amber-600 dark:text-amber-400 font-mono">
-                  76%
+                  {avgMarks}%
                 </span>
                 <span className="inline-flex items-center text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                   <ArrowUpRight className="w-3 h-3 mr-0.5" />
@@ -1469,7 +1522,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                    85.6% Cleared
+                    {passPercentage}% Cleared
                   </span>
                 </div>
               </div>
@@ -1586,7 +1639,7 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
                     Aggregated academic metrics across individual learning streams
                   </p>
                 </div>
-                <span className="text-xs font-bold text-slate-500 font-mono">1,240 Cohort</span>
+                <span className="text-xs font-bold text-slate-500 font-mono">{totalStudentsCount} Cohort</span>
               </div>
 
               <div className="overflow-x-auto">
@@ -1814,14 +1867,32 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
                         {res.resultDate}
                       </td>
                       <td className="py-3 px-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedStudentScorecard(res)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors inline-flex items-center gap-1"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View Scorecard</span>
-                        </button>
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStudentScorecard(res)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Scorecard</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenEditScorecard(res, e)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Edit Marks & Remarks"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenDeleteResult(res, e)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            title="Delete Student Score Record"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2093,25 +2164,46 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setSelectedExamDetails(null)}
-                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  showToast(`Official timetable and seating plan downloaded for ${selectedExamDetails.name}.`);
-                  setSelectedExamDetails(null);
-                }}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 flex items-center gap-1.5"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Admit Package</span>
-              </button>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditExam(selectedExamDetails)}
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit Exam</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenDeleteExam(selectedExamDetails)}
+                  className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Cancel Exam</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedExamDetails(null)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast(`Official timetable and seating plan downloaded for ${selectedExamDetails.name}.`);
+                    setSelectedExamDetails(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Admit Package</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2187,24 +2279,388 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditScorecard(selectedStudentScorecard)}
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit Marks</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenDeleteResult(selectedStudentScorecard)}
+                  className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/60 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Record</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentScorecard(null)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDownloadScorecardPDF(selectedStudentScorecard.studentName);
+                    setSelectedStudentScorecard(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF Scorecard</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          7. MODAL: EDIT / RESCHEDULE EXAM
+          ========================================================================= */}
+      {isEditExamModalOpen && examToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Edit / Reschedule Exam</h3>
+                  <span className="text-xs text-slate-400">{examToEdit.name}</span>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={() => setSelectedStudentScorecard(null)}
-                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs"
+                onClick={() => setIsEditExamModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
               >
-                Close
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditExam} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Exam Title</label>
+                <input
+                  type="text"
+                  required
+                  value={editExamForm.name}
+                  onChange={e => setEditExamForm({ ...editExamForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Class Grade</label>
+                  <select
+                    value={editExamForm.classGrade}
+                    onChange={e => setEditExamForm({ ...editExamForm, classGrade: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 font-bold focus:outline-none"
+                  >
+                    <option value="Class 10A">Class 10A</option>
+                    <option value="Class 10B">Class 10B</option>
+                    <option value="Class 9A">Class 9A</option>
+                    <option value="Class 8A">Class 8A</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Subject</label>
+                  <input
+                    type="text"
+                    required
+                    value={editExamForm.subject}
+                    onChange={e => setEditExamForm({ ...editExamForm, subject: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Examination Date</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Nov 25, 2026"
+                    value={editExamForm.dateTime}
+                    onChange={e => setEditExamForm({ ...editExamForm, dateTime: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Time Slot Range</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 09:00 AM – 11:30 AM"
+                    value={editExamForm.timeRange}
+                    onChange={e => setEditExamForm({ ...editExamForm, timeRange: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Hall / Lab</label>
+                  <input
+                    type="text"
+                    required
+                    value={editExamForm.hall}
+                    onChange={e => setEditExamForm({ ...editExamForm, hall: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Marks</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editExamForm.maxMarks}
+                    onChange={e => setEditExamForm({ ...editExamForm, maxMarks: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                  <select
+                    value={editExamForm.status}
+                    onChange={e => setEditExamForm({ ...editExamForm, status: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 font-bold focus:outline-none"
+                  >
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="Ongoing">Ongoing</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Assigned Invigilator</label>
+                <input
+                  type="text"
+                  required
+                  value={editExamForm.invigilator}
+                  onChange={e => setEditExamForm({ ...editExamForm, invigilator: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditExamModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer"
+                >
+                  Save Exam Details
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          8. MODAL: DELETE / CANCEL EXAM CONFIRMATION
+          ========================================================================= */}
+      {isDeleteExamModalOpen && examToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Cancel / Delete Exam?</h3>
+                <span className="text-xs text-slate-400">Confirmation Required</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to cancel and remove <strong>{examToDelete.name}</strong> scheduled on {examToDelete.dateTime} ({examToDelete.timeRange}) in {examToDelete.hall}?
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setIsDeleteExamModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium cursor-pointer"
+              >
+                Keep Exam
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  handleDownloadScorecardPDF(selectedStudentScorecard.studentName);
-                  setSelectedStudentScorecard(null);
-                }}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 flex items-center gap-1.5"
+                onClick={handleConfirmDeleteExam}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download PDF Scorecard</span>
+                Yes, Cancel Exam
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          9. MODAL: EDIT STUDENT SCORECARD
+          ========================================================================= */}
+      {isEditScorecardModalOpen && resultToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Edit Academic Scorecard</h3>
+                  <span className="text-xs text-slate-400">{resultToEdit.studentName} • {resultToEdit.subject}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditScorecardModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditScorecard} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Marks Obtained</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={editScorecardForm.maxMarks}
+                    required
+                    value={editScorecardForm.marksObtained}
+                    onChange={e => setEditScorecardForm({ ...editScorecardForm, marksObtained: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 font-mono font-bold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Marks</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editScorecardForm.maxMarks}
+                    onChange={e => setEditScorecardForm({ ...editScorecardForm, maxMarks: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 font-mono focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Grade Letter</label>
+                  <select
+                    value={editScorecardForm.gradeLetter}
+                    onChange={e => setEditScorecardForm({ ...editScorecardForm, gradeLetter: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 font-bold focus:outline-none"
+                  >
+                    <option value="A+">A+ (90-100%)</option>
+                    <option value="A">A (80-89%)</option>
+                    <option value="B+">B+ (70-79%)</option>
+                    <option value="B">B (60-69%)</option>
+                    <option value="C">C (50-59%)</option>
+                    <option value="D">D (35-49%)</option>
+                    <option value="E">E / Needs Improvement (&lt;35%)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Computed Percentage</label>
+                  <div className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono font-bold text-slate-700 dark:text-slate-300">
+                    {editScorecardForm.maxMarks > 0 ? Math.round((editScorecardForm.marksObtained / editScorecardForm.maxMarks) * 100) : 0}%
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Faculty Remarks & Diagnostic Feedback</label>
+                <textarea
+                  rows={3}
+                  value={editScorecardForm.remarks}
+                  onChange={e => setEditScorecardForm({ ...editScorecardForm, remarks: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none resize-none"
+                  placeholder="Enter remarks on student strengths, analytical weaknesses, or revision areas..."
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditScorecardModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+                >
+                  Save Scorecard
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          10. MODAL: DELETE RESULT CONFIRMATION
+          ========================================================================= */}
+      {isDeleteResultModalOpen && resultToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Delete Score Record?</h3>
+                <span className="text-xs text-slate-400">Confirmation Required</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to remove the scorecard for <strong>{resultToDelete.studentName}</strong> in <strong>{resultToDelete.subject}</strong> ({resultToDelete.marksObtained}/{resultToDelete.maxMarks})?
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => setIsDeleteResultModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium cursor-pointer"
+              >
+                Keep Record
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteResult}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer"
+              >
+                Yes, Delete Score
               </button>
             </div>
           </div>

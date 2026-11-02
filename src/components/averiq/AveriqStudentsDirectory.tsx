@@ -18,26 +18,296 @@ import {
   Phone,
   MapPin,
   GraduationCap,
+  Check,
+  Plus,
+  Edit2,
+  Trash2,
+  UserPlus,
+  AlertTriangle,
   ClipboardList,
   Paperclip,
-  Check
+  FileSpreadsheet
 } from 'lucide-react';
+import { useIMS } from '../../context/IMSContext';
 import { academicStudents, academicParents } from '../../data/mockAcademicData';
 import { DetailedStudent } from '../../types/academic';
 import { InteractivePieChart } from '../charts/InteractivePieChart';
 import { SemesterComparisonChart } from '../charts/SemesterComparisonChart';
 import { HomeworkService } from '../../services/homeworkService';
+import { CoachingCenterExcelModal } from './CoachingCenterExcelModal';
 
 export const AveriqStudentsDirectory: React.FC = () => {
+  const { showToast } = useIMS();
+  const [studentsList, setStudentsList] = useState<DetailedStudent[]>(academicStudents);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('All');
   const [selectedStudent, setSelectedStudent] = useState<DetailedStudent | null>(null);
   const [activeProfileTab, setActiveProfileTab] = useState<'academics' | 'fees' | 'attendance' | 'homework' | 'parent'>('academics');
   const [hwVersion, setHwVersion] = useState(0);
 
+  // Modals state for CRUD
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [studentToEdit, setStudentToEdit] = useState<DetailedStudent | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<DetailedStudent | null>(null);
+
+  // Form State for Add / Edit Student
+  const [studentFormData, setStudentFormData] = useState({
+    name: '',
+    studentCode: '',
+    rollNumber: '',
+    gender: 'MALE' as 'MALE' | 'FEMALE',
+    gradeLevel: '10th Standard',
+    section: 'A',
+    board: 'CBSE',
+    parentName: '',
+    phone: '+91 98765 43210',
+    email: 'student@institute.edu',
+    address: '14, Palm Avenue, Sector 5, City',
+    feeStatus: 'PAID' as 'PAID' | 'PARTIAL' | 'OVERDUE',
+    totalFee: 45000,
+    paidFee: 45000
+  });
+
+  // Open Add Student Modal
+  const handleOpenAddStudent = () => {
+    const nextCode = `STU-2025-${String(studentsList.length + 1).padStart(3, '0')}`;
+    setStudentFormData({
+      name: '',
+      studentCode: nextCode,
+      rollNumber: String(studentsList.length + 1),
+      gender: 'MALE',
+      gradeLevel: '10th Standard',
+      section: 'A',
+      board: 'CBSE',
+      parentName: '',
+      phone: '+91 98765 43210',
+      email: '',
+      address: '14, Palm Avenue, Sector 5, City',
+      feeStatus: 'PAID',
+      totalFee: 45000,
+      paidFee: 45000
+    });
+    setIsAddModalOpen(true);
+  };
+
+  // Open Edit Student Modal
+  const handleOpenEditStudent = (student: DetailedStudent, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setStudentToEdit(student);
+    setStudentFormData({
+      name: student.name,
+      studentCode: student.studentCode,
+      rollNumber: student.rollNumber,
+      gender: student.gender,
+      gradeLevel: student.gradeLevel,
+      section: student.section,
+      board: student.batchName.includes('ICSE') ? 'ICSE' : student.batchName.includes('State') ? 'State Board' : student.batchName.includes('IB') ? 'IB' : 'CBSE',
+      parentName: student.parentName,
+      phone: student.phone,
+      email: student.email,
+      address: student.address,
+      feeStatus: student.fees.status,
+      totalFee: student.fees.totalFee,
+      paidFee: student.fees.paidFee
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Open Delete Student Modal
+  const handleOpenDeleteStudent = (student: DetailedStudent, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setStudentToDelete(student);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Save New Student
+  const handleSaveAddStudent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentFormData.name.trim()) {
+      showToast('Please enter the student\'s full name.');
+      return;
+    }
+
+    const pending = Math.max(0, studentFormData.totalFee - studentFormData.paidFee);
+    const calculatedFeeStatus = pending === 0 ? 'PAID' : studentFormData.paidFee > 0 ? 'PARTIAL' : 'OVERDUE';
+    const batchId = studentFormData.gradeLevel.includes('10') && studentFormData.section === 'A' ? 'batch-10a' :
+                    studentFormData.gradeLevel.includes('10') ? 'batch-10b' :
+                    studentFormData.gradeLevel.includes('9') ? 'batch-9a' : 'batch-8a';
+
+    const newStudent: DetailedStudent = {
+      id: `stu-${Date.now()}`,
+      studentCode: studentFormData.studentCode || `STU-2025-${String(studentsList.length + 1).padStart(3, '0')}`,
+      rollNumber: studentFormData.rollNumber || String(studentsList.length + 1),
+      name: studentFormData.name,
+      gender: studentFormData.gender,
+      dateOfBirth: '2010-06-15',
+      bloodGroup: 'B+',
+      gradeLevel: studentFormData.gradeLevel,
+      section: studentFormData.section,
+      batchName: `${studentFormData.gradeLevel} ${studentFormData.section} (${studentFormData.board})`,
+      batchId,
+      status: 'Active',
+      parentName: studentFormData.parentName || 'Parent / Guardian',
+      parentId: `par-${Date.now()}`,
+      phone: studentFormData.phone,
+      email: studentFormData.email || `${studentFormData.name.toLowerCase().replace(/\s+/g, '.')}@student.averiq.edu`,
+      address: studentFormData.address,
+      semesters: {
+        sem1: {
+          semesterId: 'sem1',
+          semesterName: 'Term 1 Mid-Year Examination',
+          academicYear: '2025-26',
+          totalMarks: 420,
+          maxMarks: 500,
+          percentage: 84,
+          gpa: 8.4,
+          grade: 'A',
+          rank: 10,
+          attendancePct: 94,
+          status: 'Passed',
+          remarks: 'Good academic aptitude demonstrated.',
+          subjects: [
+            { subject: 'Mathematics', code: 'MTH-101', maxMarks: 100, marksObtained: 88, percentage: 88, grade: 'A', credits: 4, gradePoint: 9, remarks: 'Strong fundamentals' },
+            { subject: 'Science', code: 'SCI-101', maxMarks: 100, marksObtained: 82, percentage: 82, grade: 'A', credits: 4, gradePoint: 8, remarks: 'Active lab participation' },
+            { subject: 'Social Science', code: 'SST-101', maxMarks: 100, marksObtained: 84, percentage: 84, grade: 'A', credits: 3, gradePoint: 8, remarks: 'Thorough answers' },
+            { subject: 'English', code: 'ENG-101', maxMarks: 100, marksObtained: 86, percentage: 86, grade: 'A', credits: 3, gradePoint: 9, remarks: 'Fluent presentation' },
+            { subject: 'Second Language', code: 'LAN-101', maxMarks: 100, marksObtained: 80, percentage: 80, grade: 'A', credits: 3, gradePoint: 8, remarks: 'Satisfactory' }
+          ]
+        },
+        sem2: {
+          semesterId: 'sem2',
+          semesterName: 'Term 2 Final Assessment',
+          academicYear: '2025-26',
+          totalMarks: 445,
+          maxMarks: 500,
+          percentage: 89,
+          gpa: 8.9,
+          grade: 'A',
+          rank: 7,
+          attendancePct: 96,
+          status: 'Distinction',
+          remarks: 'Consistent excellence across all terms.',
+          subjects: [
+            { subject: 'Mathematics', code: 'MTH-101', maxMarks: 100, marksObtained: 92, percentage: 92, grade: 'A+', credits: 4, gradePoint: 10, remarks: 'Distinction' },
+            { subject: 'Science', code: 'SCI-101', maxMarks: 100, marksObtained: 88, percentage: 88, grade: 'A', credits: 4, gradePoint: 9, remarks: 'Clear practical mastery' },
+            { subject: 'Social Science', code: 'SST-101', maxMarks: 100, marksObtained: 90, percentage: 90, grade: 'A+', credits: 3, gradePoint: 10, remarks: 'Well-articulated' },
+            { subject: 'English', code: 'ENG-101', maxMarks: 100, marksObtained: 91, percentage: 91, grade: 'A+', credits: 3, gradePoint: 10, remarks: 'Outstanding essays' },
+            { subject: 'Second Language', code: 'LAN-101', maxMarks: 100, marksObtained: 84, percentage: 84, grade: 'A', credits: 3, gradePoint: 8, remarks: 'Commendable' }
+          ]
+        }
+      },
+      fees: {
+        tuitionFee: Math.round(studentFormData.totalFee * 0.7),
+        laboratoryFee: Math.round(studentFormData.totalFee * 0.1),
+        libraryFee: Math.round(studentFormData.totalFee * 0.05),
+        sportsFee: Math.round(studentFormData.totalFee * 0.05),
+        transportFee: Math.round(studentFormData.totalFee * 0.05),
+        examFee: Math.round(studentFormData.totalFee * 0.05),
+        totalFee: studentFormData.totalFee,
+        paidFee: studentFormData.paidFee,
+        pendingFee: pending,
+        dueDate: '15 Nov 2026',
+        status: calculatedFeeStatus,
+        transactions: studentFormData.paidFee > 0 ? [
+          {
+            id: `tx-${Date.now()}`,
+            receiptNo: `REC-2025-${String(Date.now()).slice(-4)}`,
+            date: '2026-10-25',
+            amount: studentFormData.paidFee,
+            mode: 'UPI',
+            status: 'Completed',
+            referenceNo: `UPI-${String(Date.now()).slice(-6)}`,
+            description: 'Initial Enrollment and Tuition Fee'
+          }
+        ] : []
+      },
+      attendance: {
+        totalWorkingDays: 95,
+        presentDays: 90,
+        absentDays: 3,
+        lateDays: 2,
+        excusedDays: 0,
+        overallPercentage: 95,
+        sem1Percentage: 94,
+        sem2Percentage: 96,
+        monthlyTrends: [
+          { month: 'Jun', workingDays: 22, presentDays: 21, absentDays: 1, lateDays: 0, percentage: 95 },
+          { month: 'Jul', workingDays: 25, presentDays: 24, absentDays: 1, lateDays: 0, percentage: 96 },
+          { month: 'Aug', workingDays: 24, presentDays: 23, absentDays: 1, lateDays: 0, percentage: 96 },
+          { month: 'Sep', workingDays: 24, presentDays: 22, absentDays: 0, lateDays: 2, percentage: 92 }
+        ]
+      }
+    };
+
+    setStudentsList([newStudent, ...studentsList]);
+    setIsAddModalOpen(false);
+    showToast(`Registered new student ${newStudent.name} (${newStudent.studentCode}) successfully.`);
+  };
+
+  // Save Edited Student
+  const handleSaveEditStudent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentToEdit) return;
+
+    const pending = Math.max(0, studentFormData.totalFee - studentFormData.paidFee);
+    const calculatedFeeStatus: 'PAID' | 'PARTIAL' | 'OVERDUE' = pending === 0 ? 'PAID' : studentFormData.paidFee > 0 ? 'PARTIAL' : 'OVERDUE';
+
+    const updated = studentsList.map(s => {
+      if (s.id === studentToEdit.id) {
+        return {
+          ...s,
+          name: studentFormData.name,
+          rollNumber: studentFormData.rollNumber,
+          gender: studentFormData.gender,
+          gradeLevel: studentFormData.gradeLevel,
+          section: studentFormData.section,
+          batchName: `${studentFormData.gradeLevel} ${studentFormData.section} (${studentFormData.board})`,
+          parentName: studentFormData.parentName,
+          phone: studentFormData.phone,
+          email: studentFormData.email,
+          address: studentFormData.address,
+          fees: {
+            ...s.fees,
+            totalFee: studentFormData.totalFee,
+            paidFee: studentFormData.paidFee,
+            pendingFee: pending,
+            status: calculatedFeeStatus
+          }
+        };
+      }
+      return s;
+    });
+
+    setStudentsList(updated);
+    if (selectedStudent && selectedStudent.id === studentToEdit.id) {
+      const refreshed = updated.find(s => s.id === studentToEdit.id);
+      if (refreshed) setSelectedStudent(refreshed);
+    }
+    setIsEditModalOpen(false);
+    showToast(`Updated student profile for ${studentFormData.name}.`);
+  };
+
+  // Delete / Archive Student
+  const handleConfirmDeleteStudent = () => {
+    if (!studentToDelete) return;
+    const studentName = studentToDelete.name;
+    const studentCode = studentToDelete.studentCode;
+
+    setStudentsList(prev => prev.filter(s => s.id !== studentToDelete.id));
+    if (selectedStudent && selectedStudent.id === studentToDelete.id) {
+      setSelectedStudent(null);
+    }
+    setIsDeleteModalOpen(false);
+    setStudentToDelete(null);
+    showToast(`Student record for ${studentName} (${studentCode}) archived and removed.`);
+  };
+
   // Filter students
   const filteredStudents = useMemo(() => {
-    return academicStudents.filter(student => {
+    return studentsList.filter(student => {
       const matchSearch =
         student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,7 +323,7 @@ export const AveriqStudentsDirectory: React.FC = () => {
 
       return matchSearch && matchClass;
     });
-  }, [searchTerm, selectedClass]);
+  }, [studentsList, searchTerm, selectedClass]);
 
   // Grade Distribution Pie Data
   const gradeDistributionData = useMemo(() => {
@@ -91,16 +361,468 @@ export const AveriqStudentsDirectory: React.FC = () => {
     return academicParents.find(p => p.parentCode === selectedStudent.parentId) || null;
   }, [selectedStudent]);
 
-  const studentHwSummary = useMemo(() => {
-    if (!selectedStudent) return null;
-    return HomeworkService.getStudentHomeworkSummary(selectedStudent.id, selectedStudent.batchId);
-  }, [selectedStudent, hwVersion]);
+  // Reusable CRUD Modals for Student Registration, Editing, and Deletion
+  const renderStudentModals = () => (
+    <>
+      {/* 1. REGISTER NEW STUDENT MODAL */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-5 animate-scaleUp my-8">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Register New Student</h3>
+                  <p className="text-xs text-slate-500">Enroll a new student profile with academic and fee details</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAddStudent} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Aarav Sharma"
+                    value={studentFormData.name}
+                    onChange={e => setStudentFormData({ ...studentFormData, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Student Code
+                  </label>
+                  <input
+                    type="text"
+                    value={studentFormData.studentCode}
+                    onChange={e => setStudentFormData({ ...studentFormData, studentCode: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Roll Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 51"
+                    value={studentFormData.rollNumber}
+                    onChange={e => setStudentFormData({ ...studentFormData, rollNumber: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Gender
+                  </label>
+                  <select
+                    value={studentFormData.gender}
+                    onChange={e => setStudentFormData({ ...studentFormData, gender: e.target.value as 'MALE' | 'FEMALE' })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Class / Grade Level
+                  </label>
+                  <select
+                    value={studentFormData.gradeLevel}
+                    onChange={e => setStudentFormData({ ...studentFormData, gradeLevel: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {['1st Standard', '2nd Standard', '3rd Standard', '4th Standard', '5th Standard', '6th Standard', '7th Standard', '8th Standard', '9th Standard', '10th Standard', '11th Standard', '12th Standard'].map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Section & Curriculum Board
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={studentFormData.section}
+                      onChange={e => setStudentFormData({ ...studentFormData, section: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="A">Section A</option>
+                      <option value="B">Section B</option>
+                      <option value="C">Section C</option>
+                    </select>
+                    <select
+                      value={studentFormData.board}
+                      onChange={e => setStudentFormData({ ...studentFormData, board: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="CBSE">CBSE</option>
+                      <option value="ICSE">ICSE</option>
+                      <option value="State Board">State Board</option>
+                      <option value="IB">IB</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Parent / Guardian Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ramesh Sharma"
+                    value={studentFormData.parentName}
+                    onChange={e => setStudentFormData({ ...studentFormData, parentName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Contact Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={studentFormData.phone}
+                    onChange={e => setStudentFormData({ ...studentFormData, phone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Total Annual Fee (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={studentFormData.totalFee}
+                    onChange={e => setStudentFormData({ ...studentFormData, totalFee: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Initial Fee Amount Deposited (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={studentFormData.paidFee}
+                    onChange={e => setStudentFormData({ ...studentFormData, paidFee: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Residential Address
+                </label>
+                <input
+                  type="text"
+                  value={studentFormData.address}
+                  onChange={e => setStudentFormData({ ...studentFormData, address: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                >
+                  Confirm & Register Student
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. EDIT STUDENT MODAL */}
+      {isEditModalOpen && studentToEdit && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-5 animate-scaleUp my-8">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Edit Student Profile</h3>
+                  <p className="text-xs text-slate-500">Update academic batch, contact info, or board assignment for {studentToEdit.name}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditStudent} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={studentFormData.name}
+                    onChange={e => setStudentFormData({ ...studentFormData, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Student Code (Locked)
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={studentFormData.studentCode}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50 text-xs font-mono text-slate-500 cursor-not-allowed"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Roll Number
+                  </label>
+                  <input
+                    type="text"
+                    value={studentFormData.rollNumber}
+                    onChange={e => setStudentFormData({ ...studentFormData, rollNumber: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Class / Grade Level
+                  </label>
+                  <select
+                    value={studentFormData.gradeLevel}
+                    onChange={e => setStudentFormData({ ...studentFormData, gradeLevel: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {['1st Standard', '2nd Standard', '3rd Standard', '4th Standard', '5th Standard', '6th Standard', '7th Standard', '8th Standard', '9th Standard', '10th Standard', '11th Standard', '12th Standard'].map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Section & Curriculum Board
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={studentFormData.section}
+                      onChange={e => setStudentFormData({ ...studentFormData, section: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="A">Section A</option>
+                      <option value="B">Section B</option>
+                      <option value="C">Section C</option>
+                    </select>
+                    <select
+                      value={studentFormData.board}
+                      onChange={e => setStudentFormData({ ...studentFormData, board: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="CBSE">CBSE</option>
+                      <option value="ICSE">ICSE</option>
+                      <option value="State Board">State Board</option>
+                      <option value="IB">IB</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Parent / Guardian Name
+                  </label>
+                  <input
+                    type="text"
+                    value={studentFormData.parentName}
+                    onChange={e => setStudentFormData({ ...studentFormData, parentName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Contact Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={studentFormData.phone}
+                    onChange={e => setStudentFormData({ ...studentFormData, phone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Total Annual Fee (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={studentFormData.totalFee}
+                    onChange={e => setStudentFormData({ ...studentFormData, totalFee: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Paid Fee Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={studentFormData.paidFee}
+                    onChange={e => setStudentFormData({ ...studentFormData, paidFee: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Residential Address
+                </label>
+                <input
+                  type="text"
+                  value={studentFormData.address}
+                  onChange={e => setStudentFormData({ ...studentFormData, address: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+                >
+                  Save Profile Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. DELETE / SOFT-ARCHIVE STUDENT CONFIRMATION MODAL */}
+      {isDeleteModalOpen && studentToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-scaleUp">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">Archive & Remove Student?</h3>
+              <p className="text-xs text-slate-500">
+                Are you sure you want to remove <strong className="text-slate-900 dark:text-white">{studentToDelete.name}</strong> ({studentToDelete.studentCode}) from active enrollments?
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-xs space-y-1">
+              <div className="flex justify-between text-slate-500">
+                <span>Class / Section:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{studentToDelete.gradeLevel} {studentToDelete.section}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Roll Number:</span>
+                <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{studentToDelete.rollNumber}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Fee Balance:</span>
+                <span className="font-bold text-rose-600">₹{studentToDelete.fees.pendingFee.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400 text-center">
+              This will safely transition the student to the institutional alumni/archived ledger without destroying historical grades or attendance records.
+            </p>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteStudent}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs cursor-pointer"
+              >
+                Confirm Archive
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. COACHING CENTER DEMO EXCEL TEMPLATE MODAL */}
+      <CoachingCenterExcelModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+      />
+    </>
+  );
 
   // FULL IN-PAGE STUDENT PROFILE VIEW (Replaces Student Directory when student is selected)
   if (selectedStudent) {
     const s1 = selectedStudent.semesters.sem1.percentage;
     const s2 = selectedStudent.semesters.sem2.percentage;
     const diff = Number((s2 - s1).toFixed(1));
+    const studentHwSummary = HomeworkService.getStudentHomeworkSummary(
+      selectedStudent.id,
+      selectedStudent.batchId || 'batch-10a'
+    );
 
     return (
       <div className="space-y-6">
@@ -140,6 +862,24 @@ export const AveriqStudentsDirectory: React.FC = () => {
               {selectedStudent.fees.status === 'OVERDUE' && <AlertCircle className="w-3.5 h-3.5" />}
               Fee: {selectedStudent.fees.status}
             </span>
+
+            <button
+              type="button"
+              onClick={() => handleOpenEditStudent(selectedStudent)}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs cursor-pointer"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-blue-600" />
+              <span>Edit Profile</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenDeleteStudent(selectedStudent)}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 shadow-xs cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span>Archive</span>
+            </button>
           </div>
         </div>
 
@@ -663,6 +1403,7 @@ export const AveriqStudentsDirectory: React.FC = () => {
             </div>
           )}
         </div>
+        {renderStudentModals()}
       </div>
     );
   }
@@ -676,7 +1417,7 @@ export const AveriqStudentsDirectory: React.FC = () => {
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span>Student Academic Directory</span>
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
-              50 Enrolled Students
+              {studentsList.length} Enrolled Students
             </span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -687,15 +1428,32 @@ export const AveriqStudentsDirectory: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={handleOpenAddStudent}
+            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Register Student</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsExcelModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+            title="Download & inspect turnkey Excel template for individual coaching centers"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Coaching Excel Template</span>
+          </button>
+          <button
+            type="button"
             onClick={() => {
               const csvContent = "data:text/csv;charset=utf-8," 
                 + ["Code,Name,Class,Roll,Sem1%,Sem2%,Attendance%,FeeStatus", 
-                  ...academicStudents.map(s => `${s.studentCode},${s.name},${s.gradeLevel} ${s.section},${s.rollNumber},${s.semesters.sem1.percentage}%,${s.semesters.sem2.percentage}%,${s.attendance.overallPercentage}%,${s.fees.status}`)
+                  ...studentsList.map(s => `${s.studentCode},${s.name},${s.gradeLevel} ${s.section},${s.rollNumber},${s.semesters.sem1.percentage}%,${s.semesters.sem2.percentage}%,${s.attendance.overallPercentage}%,${s.fees.status}`)
                 ].join("\n");
               const encodedUri = encodeURI(csvContent);
               const link = document.createElement("a");
               link.setAttribute("href", encodedUri);
-              link.setAttribute("download", "Averiq_50_Students_Roster.csv");
+              link.setAttribute("download", `Averiq_${studentsList.length}_Students_Roster.csv`);
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
@@ -788,7 +1546,7 @@ export const AveriqStudentsDirectory: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-            Showing {filteredStudents.length} of 50 Students
+            Showing {filteredStudents.length} of {studentsList.length} Students
           </div>
           <span className="text-[11px] text-slate-400">Click any row or "Details" to open full in-dashboard profile view</span>
         </div>
@@ -895,17 +1653,33 @@ export const AveriqStudentsDirectory: React.FC = () => {
                       )}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedStudent(student);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold flex items-center gap-1 ml-auto cursor-pointer"
-                      >
-                        <span>Details</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStudent(student)}
+                          className="px-2 py-1 rounded-lg text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                          title="View Full Student Profile"
+                        >
+                          <span>Details</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenEditStudent(student, e)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="Edit Student Information"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenDeleteStudent(student, e)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title="Archive / Remove Student"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -914,6 +1688,7 @@ export const AveriqStudentsDirectory: React.FC = () => {
           </table>
         </div>
       </div>
+      {renderStudentModals()}
     </div>
   );
 };

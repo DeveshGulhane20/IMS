@@ -225,6 +225,24 @@ export const HomeworkService = {
     return newHw;
   },
 
+  updateHomework: (id: string, updates: Partial<ClassHomework>): ClassHomework | null => {
+    const list = HomeworkService.getHomeworkList();
+    const index = list.findIndex(h => h.id === id);
+    if (index === -1) return null;
+
+    list[index] = { ...list[index], ...updates };
+    HomeworkService.saveHomeworkList([...list]);
+    return list[index];
+  },
+
+  deleteHomework: (id: string): boolean => {
+    const list = HomeworkService.getHomeworkList();
+    const filtered = list.filter(h => h.id !== id);
+    if (filtered.length === list.length) return false;
+    HomeworkService.saveHomeworkList(filtered);
+    return true;
+  },
+
   toggleStudentStatus: (homeworkId: string, studentId: string): ClassHomework | null => {
     const list = HomeworkService.getHomeworkList();
     const hw = list.find(h => h.id === homeworkId);

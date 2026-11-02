@@ -29,7 +29,9 @@ import {
   Send,
   AlertCircle,
   TrendingUp,
-  Bookmark
+  Bookmark,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { useIMS } from '../../context/IMSContext';
 
@@ -76,6 +78,21 @@ export const AveriqEventsCalendar: React.FC = () => {
   const [isAddHolidayModalOpen, setIsAddHolidayModalOpen] = useState(false);
   const [isSendReminderModalOpen, setIsSendReminderModalOpen] = useState(false);
   const [selectedEventDetails, setSelectedEventDetails] = useState<EventItem | null>(null);
+
+  // Edit / Delete Event States
+  const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
+  const [isDeleteEventModalOpen, setIsDeleteEventModalOpen] = useState(false);
+  const [eventToEdit, setEventToEdit] = useState<EventItem | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<EventItem | null>(null);
+  const [editEventForm, setEditEventForm] = useState({
+    title: '',
+    category: 'Event' as 'Event' | 'Exam' | 'Holiday' | 'Meeting' | 'Class',
+    date: '',
+    time: '',
+    venue: '',
+    description: '',
+    coordinator: ''
+  });
 
   // Forms
   const [newEventForm, setNewEventForm] = useState({
@@ -325,6 +342,79 @@ export const AveriqEventsCalendar: React.FC = () => {
     e.preventDefault();
     showToast(`Broadcast reminder dispatched to all ${reminderForm.batch} students via ${reminderForm.channel}.`);
     setIsSendReminderModalOpen(false);
+  };
+
+  const getEventBadgeColor = (category: string) => {
+    switch (category) {
+      case 'Exam': return 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800';
+      case 'Holiday': return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+      case 'Meeting': return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+      case 'Class': return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+      default: return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800';
+    }
+  };
+
+  const handleOpenEditEvent = (ev: EventItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEventToEdit(ev);
+    setEditEventForm({
+      title: ev.title,
+      category: ev.category,
+      date: ev.date,
+      time: ev.time,
+      venue: ev.venue,
+      description: ev.description,
+      coordinator: ev.coordinator || 'Academic Admin'
+    });
+    setIsEditEventModalOpen(true);
+  };
+
+  const handleSaveEditEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventToEdit) return;
+
+    const updatedList = upcomingEvents.map(item => {
+      if (item.id === eventToEdit.id) {
+        const updated: EventItem = {
+          ...item,
+          title: editEventForm.title,
+          category: editEventForm.category,
+          date: editEventForm.date,
+          time: editEventForm.time,
+          venue: editEventForm.venue,
+          description: editEventForm.description,
+          coordinator: editEventForm.coordinator,
+          badgeColor: getEventBadgeColor(editEventForm.category)
+        };
+        if (selectedEventDetails && selectedEventDetails.id === item.id) {
+          setSelectedEventDetails(updated);
+        }
+        return updated;
+      }
+      return item;
+    });
+
+    setUpcomingEvents(updatedList);
+    setIsEditEventModalOpen(false);
+    setEventToEdit(null);
+    showToast(`Event "${editEventForm.title}" updated successfully.`);
+  };
+
+  const handleOpenDeleteEvent = (ev: EventItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEventToDelete(ev);
+    setIsDeleteEventModalOpen(true);
+  };
+
+  const handleConfirmDeleteEvent = () => {
+    if (!eventToDelete) return;
+    setUpcomingEvents(prev => prev.filter(ev => ev.id !== eventToDelete.id));
+    if (selectedEventDetails && selectedEventDetails.id === eventToDelete.id) {
+      setSelectedEventDetails(null);
+    }
+    showToast(`Event "${eventToDelete.title}" removed from schedule.`);
+    setIsDeleteEventModalOpen(false);
+    setEventToDelete(null);
   };
 
   return (
@@ -674,7 +764,25 @@ export const AveriqEventsCalendar: React.FC = () => {
                         <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${ev.badgeColor}`}>
                           {ev.category}
                         </span>
-                        <span className="font-mono text-slate-400 text-[11px]">{ev.date}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-slate-400 text-[11px] mr-1">{ev.date}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenEditEvent(ev, e)}
+                            title="Edit Event"
+                            className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenDeleteEvent(ev, e)}
+                            title="Delete Event"
+                            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                       <h4 className="font-bold text-slate-900 dark:text-white text-sm">{ev.title}</h4>
                       <p className="text-slate-500 text-[11px] line-clamp-2">{ev.description}</p>
@@ -1014,7 +1122,25 @@ export const AveriqEventsCalendar: React.FC = () => {
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${event.badgeColor}`}>
                     {event.category}
                   </span>
-                  <span className="font-mono text-slate-400 text-[11px] font-semibold">{event.date}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-slate-400 text-[11px] font-semibold mr-1">{event.date}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenEditEvent(event, e)}
+                      title="Edit Event"
+                      className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenDeleteEvent(event, e)}
+                      title="Delete Event"
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
 
                 <h4 className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
@@ -1520,23 +1646,233 @@ export const AveriqEventsCalendar: React.FC = () => {
               </div>
             </div>
 
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ev = selectedEventDetails;
+                    handleOpenEditEvent(ev);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-semibold text-xs flex items-center gap-1"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ev = selectedEventDetails;
+                    handleOpenDeleteEvent(ev);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 font-semibold text-xs flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedEventDetails(null)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast(`Event itinerary printed for ${selectedEventDetails.title}.`);
+                    setSelectedEventDetails(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30"
+                >
+                  Download Itinerary
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. EDIT EVENT MODAL */}
+      {isEditEventModalOpen && eventToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Edit Event Details</h3>
+                  <span className="text-xs text-slate-400">Update schedule and location</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditEventModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditEvent} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Event Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editEventForm.title}
+                  onChange={e => setEditEventForm({ ...editEventForm, title: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={editEventForm.category}
+                    onChange={e => setEditEventForm({ ...editEventForm, category: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Event">Event</option>
+                    <option value="Exam">Exam</option>
+                    <option value="Holiday">Holiday</option>
+                    <option value="Meeting">Meeting</option>
+                    <option value="Class">Class Activity</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editEventForm.date}
+                    onChange={e => setEditEventForm({ ...editEventForm, date: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Time Window
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editEventForm.time}
+                    onChange={e => setEditEventForm({ ...editEventForm, time: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Venue
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editEventForm.venue}
+                    onChange={e => setEditEventForm({ ...editEventForm, venue: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Coordinator / In-Charge
+                </label>
+                <input
+                  type="text"
+                  value={editEventForm.coordinator}
+                  onChange={e => setEditEventForm({ ...editEventForm, coordinator: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Description & Agenda
+                </label>
+                <textarea
+                  rows={2}
+                  value={editEventForm.description}
+                  onChange={e => setEditEventForm({ ...editEventForm, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditEventModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-md shadow-blue-600/30 flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 7. DELETE EVENT MODAL */}
+      {isDeleteEventModalOpen && eventToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-900/30">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Delete Scheduled Event?</h3>
+                <span className="text-xs text-slate-400">Action cannot be undone</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to remove <span className="font-bold text-slate-900 dark:text-white">"{eventToDelete.title}"</span> scheduled for <span className="font-mono font-semibold">{eventToDelete.date}</span>? All enrolled participant notices will be cleared.
+            </p>
+
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setSelectedEventDetails(null)}
+                onClick={() => {
+                  setIsDeleteEventModalOpen(false);
+                  setEventToDelete(null);
+                }}
                 className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs"
               >
-                Close
+                Cancel
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  showToast(`Event itinerary printed for ${selectedEventDetails.title}.`);
-                  setSelectedEventDetails(null);
-                }}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30"
+                onClick={handleConfirmDeleteEvent}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/30 flex items-center gap-1.5"
               >
-                Download Itinerary
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Event</span>
               </button>
             </div>
           </div>

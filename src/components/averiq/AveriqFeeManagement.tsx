@@ -26,7 +26,9 @@ import {
   Sparkles,
   HelpCircle,
   FileSpreadsheet,
-  GraduationCap
+  GraduationCap,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -39,9 +41,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
 } from 'recharts';
 import { useIMS } from '../../context/IMSContext';
+import { academicStudents } from '../../data/mockAcademicData';
 
 interface FeeStructureRow {
   id: string;
@@ -78,119 +80,90 @@ export const AveriqFeeManagement: React.FC = () => {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [isRectificationModalOpen, setIsRectificationModalOpen] = useState(false);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [feeToDelete, setFeeToDelete] = useState<FeeStructureRow | null>(null);
 
   const [activeFeeRow, setActiveFeeRow] = useState<FeeStructureRow | null>(null);
 
-  // Initial Data matching image exactly:
-  // Nursery (25k + 2.5k = 27.5k), LKG (27k + 2.5k = 29.5k), UKG (30k + 3k = 33k),
-  // Class 1-5 (32.5k + 2.5k = 35k), Class 6-8 (38k + 3k = 41k), Class 9-10 (49k + 4.5k = 53.5k), Class 11-12 (55k + 5.5k = 60.5k)
+  // Initial Data configured to exact 4 active classes summing to precisely 50 students
   const [feeStructures, setFeeStructures] = useState<FeeStructureRow[]>([
     {
-      id: 'fs-nursery',
-      className: 'Nursery',
-      tuitionFee: 25000,
-      examFee: 2500,
-      totalFee: 27500,
-      labFee: 1000,
+      id: 'fs-10a',
+      className: 'Class 10A',
+      tuitionFee: 14500,
+      examFee: 5000,
+      totalFee: 19500,
+      labFee: 3000,
       libraryFee: 1500,
-      term1Fee: 11000,
-      term2Fee: 9000,
-      term3Fee: 7500,
-      totalStudents: 120,
-      collectedAmount: 2100000,
-      pendingAmount: 1200000
+      term1Fee: 7800,
+      term2Fee: 6800,
+      term3Fee: 4900,
+      totalStudents: 20,
+      collectedAmount: 356400,
+      pendingAmount: 33600
     },
     {
-      id: 'fs-lkg',
-      className: 'LKG',
-      tuitionFee: 27000,
-      examFee: 2500,
-      totalFee: 29500,
-      labFee: 1200,
+      id: 'fs-10b',
+      className: 'Class 10B',
+      tuitionFee: 14700,
+      examFee: 4900,
+      totalFee: 19600,
+      labFee: 3000,
       libraryFee: 1500,
-      term1Fee: 12000,
-      term2Fee: 9500,
-      term3Fee: 8000,
-      totalStudents: 130,
-      collectedAmount: 2450000,
-      pendingAmount: 1385000
+      term1Fee: 7840,
+      term2Fee: 6860,
+      term3Fee: 4900,
+      totalStudents: 15,
+      collectedAmount: 269100,
+      pendingAmount: 24900
     },
     {
-      id: 'fs-ukg',
-      className: 'UKG',
-      tuitionFee: 30000,
-      examFee: 3000,
-      totalFee: 33000,
-      labFee: 1500,
-      libraryFee: 1500,
-      term1Fee: 13000,
-      term2Fee: 11000,
-      term3Fee: 9000,
-      totalStudents: 140,
-      collectedAmount: 2980000,
-      pendingAmount: 1640000
+      id: 'fs-9a',
+      className: 'Class 9A',
+      tuitionFee: 14500,
+      examFee: 4800,
+      totalFee: 19300,
+      labFee: 2500,
+      libraryFee: 1200,
+      term1Fee: 7720,
+      term2Fee: 6755,
+      term3Fee: 4825,
+      totalStudents: 9,
+      collectedAmount: 159200,
+      pendingAmount: 14800
     },
     {
-      id: 'fs-1-5',
-      className: 'Class 1 - 5',
-      tuitionFee: 32500,
-      examFee: 2500,
-      totalFee: 35000,
+      id: 'fs-8a',
+      className: 'Class 8A',
+      tuitionFee: 14600,
+      examFee: 4900,
+      totalFee: 19500,
       labFee: 2000,
-      libraryFee: 2000,
-      term1Fee: 14000,
-      term2Fee: 11000,
-      term3Fee: 10000,
-      totalStudents: 310,
-      collectedAmount: 7200000,
-      pendingAmount: 3650000
-    },
-    {
-      id: 'fs-6-8',
-      className: 'Class 6 - 8',
-      tuitionFee: 38000,
-      examFee: 3000,
-      totalFee: 41000,
-      labFee: 3500,
-      libraryFee: 2500,
-      term1Fee: 16000,
-      term2Fee: 13000,
-      term3Fee: 12000,
-      totalStudents: 240,
-      collectedAmount: 6450000,
-      pendingAmount: 3390000
-    },
-    {
-      id: 'fs-9-10',
-      className: 'Class 9 - 10',
-      tuitionFee: 49000,
-      examFee: 4500,
-      totalFee: 53500,
-      labFee: 5000,
-      libraryFee: 3000,
-      term1Fee: 22000,
-      term2Fee: 17500,
-      term3Fee: 14000,
-      totalStudents: 180,
-      collectedAmount: 6850500,
-      pendingAmount: 2779500
-    },
-    {
-      id: 'fs-11-12',
-      className: 'Class 11 - 12',
-      tuitionFee: 55000,
-      examFee: 5500,
-      totalFee: 60500,
-      labFee: 7000,
-      libraryFee: 3500,
-      term1Fee: 25000,
-      term2Fee: 20000,
-      term3Fee: 15500,
-      totalStudents: 120,
-      collectedAmount: 4370000,
-      pendingAmount: 2290000
+      libraryFee: 1000,
+      term1Fee: 7800,
+      term2Fee: 6825,
+      term3Fee: 4875,
+      totalStudents: 6,
+      collectedAmount: 106300,
+      pendingAmount: 10700
     }
   ]);
+
+  // Dynamic fee metrics from master 50-student database
+  const { totalStudentsCount, totalFeeYear, totalCollectedAmount, totalPendingAmount, totalDueStudentsCount } = useMemo(() => {
+    const totalStudents = academicStudents.length; // 50
+    const totalYear = academicStudents.reduce((acc, s) => acc + (s.fees?.totalFee || 0), 0); // ₹9,75,000
+    const totalCollected = academicStudents.reduce((acc, s) => acc + (s.fees?.paidFee || 0), 0); // ₹8,91,000
+    const totalPending = academicStudents.reduce((acc, s) => acc + (s.fees?.pendingFee || 0), 0); // ₹84,000
+    const totalDue = academicStudents.filter(s => (s.fees?.pendingFee || 0) > 0).length; // 24
+    return {
+      totalStudentsCount: totalStudents,
+      totalFeeYear: totalYear,
+      totalCollectedAmount: totalCollected,
+      totalPendingAmount: totalPending,
+      totalDueStudentsCount: totalDue
+    };
+  }, []);
 
   // Form for Add/Edit Fee Structure
   const [formData, setFormData] = useState({
@@ -223,7 +196,7 @@ export const AveriqFeeManagement: React.FC = () => {
     },
     {
       id: 'up-4',
-      title: 'New class (Class 11-12) added',
+      title: 'New class (Class 8A) added',
       meta: 'By Admin • 12 Apr 2025, 09:20 AM',
       color: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-800'
     }
@@ -247,29 +220,29 @@ export const AveriqFeeManagement: React.FC = () => {
   }, [feeStructures, tableSearch, selectedClassFilter]);
 
   // Chart 1: Fee Structure by Class (Bar Chart with Total Fee, Paid, Pending)
-  // Matching the visual values from the chart:
-  // Nursery (~₹6L total, ~₹4.5L paid, ~₹3.5L pending)
-  // LKG (~₹7L total, ~₹5L paid, ~₹4.5L pending)
-  // UKG (~₹9L total, ~₹6.5L paid, ~₹5.5L pending)
-  // Class 1-5 (~₹13L total, ~₹9L paid, ~₹6.5L pending)
-  // Class 6-8 (~₹17L total, ~₹11L paid, ~₹7.5L pending)
-  // Class 9-10 (~₹18.5L total, ~₹12L paid, ~₹8L pending)
-  // Class 11-12 (~₹14L total, ~₹9.5L paid, ~₹7.5L pending)
-  const barChartData = [
-    { name: 'Nursery', total: 6.2, paid: 4.2, pending: 3.2 },
-    { name: 'LKG', total: 7.4, paid: 5.1, pending: 4.4 },
-    { name: 'UKG', total: 9.2, paid: 6.6, pending: 5.5 },
-    { name: 'Class 1-5', total: 13.0, paid: 8.8, pending: 6.5 },
-    { name: 'Class 6-8', total: 16.8, paid: 11.2, pending: 7.6 },
-    { name: 'Class 9-10', total: 18.5, paid: 12.0, pending: 8.0 },
-    { name: 'Class 11-12', total: 14.2, paid: 9.6, pending: 7.2 }
-  ];
+  const barChartData = useMemo(() => {
+    return feeStructures.map(row => {
+      const tot = (row.collectedAmount + row.pendingAmount) / 100000;
+      const pd = row.collectedAmount / 100000;
+      const pnd = row.pendingAmount / 100000;
+      return {
+        name: row.className,
+        total: Number(tot.toFixed(2)),
+        paid: Number(pd.toFixed(2)),
+        pending: Number(pnd.toFixed(2))
+      };
+    });
+  }, [feeStructures]);
 
-  // Chart 2: Fee Collection Status (Donut 66% Collected / 34% Pending)
-  const donutData = [
-    { name: 'Collected', value: 66, amount: '₹ 32,40,500', color: '#10B981' }, // emerald green
-    { name: 'Pending', value: 34, amount: '₹ 16,34,500', color: '#0056D6' } // primary blue
-  ];
+  // Chart 2: Fee Collection Status (Donut Dynamic Collected / Pending)
+  const donutData = useMemo(() => {
+    const collPct = totalFeeYear > 0 ? Math.round((totalCollectedAmount / totalFeeYear) * 100) : 0;
+    const pendPct = 100 - collPct;
+    return [
+      { name: 'Collected', value: collPct, amount: `₹ ${formatInr(totalCollectedAmount)}`, color: '#10B981' }, // emerald green
+      { name: 'Pending', value: pendPct, amount: `₹ ${formatInr(totalPendingAmount)}`, color: '#0056D6' } // primary blue
+    ];
+  }, [totalCollectedAmount, totalPendingAmount, totalFeeYear]);
 
   // Handlers
   const handleOpenAdd = () => {
@@ -367,6 +340,32 @@ export const AveriqFeeManagement: React.FC = () => {
   const handleOpenView = (row: FeeStructureRow) => {
     setActiveFeeRow(row);
     setIsViewModalOpen(true);
+  };
+
+  const handleOpenDelete = (row: FeeStructureRow) => {
+    setFeeToDelete(row);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!feeToDelete) return;
+    setFeeStructures(prev => prev.filter(r => r.id !== feeToDelete.id));
+    if (activeFeeRow && activeFeeRow.id === feeToDelete.id) {
+      setActiveFeeRow(null);
+      setIsViewModalOpen(false);
+    }
+    showToast(`Fee structure for "${feeToDelete.className}" deleted.`);
+    setRecentUpdates(prev => [
+      {
+        id: `up-${Date.now()}`,
+        title: `Fee structure removed for ${feeToDelete.className}`,
+        meta: 'By Admin • Just now',
+        color: 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+      },
+      ...prev
+    ]);
+    setIsDeleteModalOpen(false);
+    setFeeToDelete(null);
   };
 
   const handleGenerateReceipt = () => {
@@ -496,19 +495,16 @@ export const AveriqFeeManagement: React.FC = () => {
             className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="All Classes">All Classes</option>
-            <option value="Nursery">Nursery</option>
-            <option value="LKG">LKG</option>
-            <option value="UKG">UKG</option>
-            <option value="Class 1 - 5">Class 1 - 5</option>
-            <option value="Class 6 - 8">Class 6 - 8</option>
-            <option value="Class 9 - 10">Class 9 - 10</option>
-            <option value="Class 11 - 12">Class 11 - 12</option>
+            <option value="Class 10A">Class 10A</option>
+            <option value="Class 10B">Class 10B</option>
+            <option value="Class 9A">Class 9A</option>
+            <option value="Class 8A">Class 8A</option>
           </select>
         </div>
       </div>
 
       {/* =========================================================================
-          2. TOP 5 METRIC CARDS
+          2. TOP 5 METRIC CARDS (DYNAMIC TO 50 MASTER STUDENTS)
           ========================================================================= */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         {/* Card 1: Total Students */}
@@ -520,11 +516,11 @@ export const AveriqFeeManagement: React.FC = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">1,240</span>
+            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">{totalStudentsCount}</span>
           </div>
           <div className="mt-1 flex items-center text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
             <ArrowUpRight className="w-3 h-3 mr-0.5" />
-            6% vs last year
+            Active Master Roster
           </div>
         </div>
 
@@ -537,11 +533,11 @@ export const AveriqFeeManagement: React.FC = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">₹ 48,75,000</span>
+            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">₹ {formatInr(totalFeeYear)}</span>
           </div>
           <div className="mt-1 flex items-center text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
             <ArrowUpRight className="w-3 h-3 mr-0.5" />
-            12% vs last year
+            Annual Curriculum Budget
           </div>
         </div>
 
@@ -554,11 +550,11 @@ export const AveriqFeeManagement: React.FC = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">₹ 32,40,500</span>
+            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">₹ {formatInr(totalCollectedAmount)}</span>
           </div>
           <div className="mt-1 flex items-center text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
             <ArrowUpRight className="w-3 h-3 mr-0.5" />
-            18% vs last year
+            {totalFeeYear > 0 ? Math.round((totalCollectedAmount / totalFeeYear) * 100) : 0}% Realized
           </div>
         </div>
 
@@ -571,11 +567,11 @@ export const AveriqFeeManagement: React.FC = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">₹ 16,34,500</span>
+            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">₹ {formatInr(totalPendingAmount)}</span>
           </div>
           <div className="mt-1 flex items-center text-[10px] font-bold text-rose-600 dark:text-rose-400">
             <ArrowDownRight className="w-3 h-3 mr-0.5" />
-            5% vs last year
+            {totalFeeYear > 0 ? Math.round((totalPendingAmount / totalFeeYear) * 100) : 0}% Dues Remaining
           </div>
         </div>
 
@@ -588,11 +584,11 @@ export const AveriqFeeManagement: React.FC = () => {
             </div>
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">342</span>
+            <span className="text-2xl font-black text-slate-900 dark:text-white font-mono">{totalDueStudentsCount}</span>
           </div>
           <div className="mt-1 flex items-center text-[10px] font-bold text-amber-600 dark:text-amber-400">
             <ArrowDownRight className="w-3 h-3 mr-0.5" />
-            7% vs last year
+            {totalStudentsCount > 0 ? Math.round((totalDueStudentsCount / totalStudentsCount) * 100) : 0}% of cohort
           </div>
         </div>
       </div>
@@ -645,8 +641,8 @@ export const AveriqFeeManagement: React.FC = () => {
                     <YAxis
                       tick={{ fontSize: 10 }}
                       tickFormatter={val => `₹ ${val}L`}
-                      domain={[0, 20]}
-                      ticks={[0, 5, 10, 15, 20]}
+                      domain={[0, 5]}
+                      ticks={[0, 1, 2, 3, 4, 5]}
                     />
                     <Tooltip
                       formatter={(val: any) => [`₹ ${val} Lakhs`, '']}
@@ -852,6 +848,14 @@ export const AveriqFeeManagement: React.FC = () => {
                               title="View Details"
                             >
                               <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDelete(row)}
+                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 transition-colors"
+                              title="Delete Fee Structure"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               type="button"
@@ -1437,25 +1441,53 @@ export const AveriqFeeManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => setIsViewModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  showToast(`Fee breakdown printed for ${activeFeeRow.className}`);
-                  setIsViewModalOpen(false);
-                }}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 flex items-center gap-1.5"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print Fee Schedule</span>
-              </button>
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const row = activeFeeRow;
+                    setIsViewModalOpen(false);
+                    handleOpenEdit(row);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-semibold text-xs flex items-center gap-1"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const row = activeFeeRow;
+                    setIsViewModalOpen(false);
+                    handleOpenDelete(row);
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 font-semibold text-xs flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsViewModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast(`Fee breakdown printed for ${activeFeeRow.className}`);
+                    setIsViewModalOpen(false);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Fee Schedule</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1724,6 +1756,64 @@ export const AveriqFeeManagement: React.FC = () => {
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Export Ledger</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. DELETE FEE STRUCTURE MODAL */}
+      {isDeleteModalOpen && feeToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-900/30">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Delete Fee Structure?</h3>
+                <span className="text-xs text-slate-400">Class {feeToDelete.className}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to delete the fee configuration for <span className="font-bold text-slate-900 dark:text-white">{feeToDelete.className}</span>?
+              Annual fees of <span className="font-mono font-bold text-rose-600">₹ {formatInr(feeToDelete.totalFee)}</span> and associated student billing rules will be permanently unlinked.
+            </p>
+
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-[11px] space-y-1 font-mono">
+              <div className="flex justify-between text-slate-500">
+                <span>Tuition Fee:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">₹ {formatInr(feeToDelete.tuitionFee)}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Exam Fee:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">₹ {formatInr(feeToDelete.examFee)}</span>
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>Total Enrolled:</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{feeToDelete.totalStudents} Students</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setFeeToDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/30 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Structure</span>
               </button>
             </div>
           </div>

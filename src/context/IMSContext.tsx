@@ -60,6 +60,8 @@ import {
   mockFinanceTransactions,
   mockSubstituteAssignments
 } from '../data/mockData';
+import { academicTeachers as initialAcademicTeachers } from '../data/mockAcademicData';
+import { DetailedTeacher } from '../types/academic';
 import { computeStudentDiagnostics, StudentDiagnosticResult } from '../services/analyticsEngine';
 
 interface IMSContextType {
@@ -169,6 +171,18 @@ interface IMSContextType {
   toggleCourseStatus: (courseId: string) => void;
   addBatch: (name: string, courseName: string, teacherName: string) => void;
   addTimetableSlot: (slot: Omit<TimetableSlot, 'id'>) => boolean;
+
+  // Academic Faculty Directory & Curriculum Assignments
+  academicTeachers: DetailedTeacher[];
+  assignTeacherToSubject: (
+    teacherName: string,
+    classId: string,
+    className: string,
+    subjectName: string,
+    board: string,
+    gradeLevel: string
+  ) => void;
+  removeTeacherFromSubject: (classId: string, subjectName: string) => void;
 }
 
 const IMSContext = createContext<IMSContextType | undefined>(undefined);
@@ -232,6 +246,7 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [ptmMeetings, setPtmMeetings] = useState<PTMMeeting[]>(mockPTMs);
   const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>(mockFinanceTransactions);
   const [substitutes, setSubstitutes] = useState<SubstituteAssignment[]>(mockSubstituteAssignments);
+  const [academicTeachersList, setAcademicTeachersList] = useState<DetailedTeacher[]>(initialAcademicTeachers);
 
   const setRole = (newRole: Role) => {
     setRoleState(newRole);
@@ -779,6 +794,68 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
+  const assignTeacherToSubject = (
+    teacherName: string,
+    classId: string,
+    className: string,
+    subjectName: string,
+    board: string,
+    gradeLevel: string
+  ) => {
+    setAcademicTeachersList(prevList => {
+      return prevList.map(t => {
+        // Remove previous assignment of this subject in this class from this teacher if it exists
+        const existingClassSubjects = (t.assignedClassesWithSubjects || []).filter(
+          item => !(item.classId === classId && item.subjectName === subjectName)
+        );
+
+        if (t.name === teacherName) {
+          const newAssignment = {
+            classId,
+            className,
+            subjectName,
+            board,
+            gradeLevel,
+            hoursPerWeek: 5
+          };
+          const updatedClasses = [...existingClassSubjects, newAssignment];
+          const updatedBatches = Array.from(new Set([...t.assignedBatches, className]));
+          const updatedSubjects = Array.from(new Set([...t.assignedSubjects, subjectName]));
+          return {
+            ...t,
+            assignedBatches: updatedBatches,
+            assignedSubjects: updatedSubjects,
+            assignedClassesWithSubjects: updatedClasses,
+            workloadHoursPerWeek: Math.min(38, Math.max(t.workloadHoursPerWeek, updatedClasses.length * 4))
+          };
+        } else {
+          // If another teacher previously had this subject in this class, remove it
+          const hadAssignment = (t.assignedClassesWithSubjects || []).some(
+            item => item.classId === classId && item.subjectName === subjectName
+          );
+          if (hadAssignment) {
+            return {
+              ...t,
+              assignedClassesWithSubjects: existingClassSubjects
+            };
+          }
+          return t;
+        }
+      });
+    });
+  };
+
+  const removeTeacherFromSubject = (classId: string, subjectName: string) => {
+    setAcademicTeachersList(prevList =>
+      prevList.map(t => ({
+        ...t,
+        assignedClassesWithSubjects: (t.assignedClassesWithSubjects || []).filter(
+          item => !(item.classId === classId && item.subjectName === subjectName)
+        )
+      }))
+    );
+  };
+
   return (
     <IMSContext.Provider
       value={{
@@ -825,6 +902,11 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ptmMeetings,
         financeTransactions,
         substitutes,
+
+        // Academic Faculty Directory & Assignments
+        academicTeachers: academicTeachersList,
+        assignTeacherToSubject,
+        removeTeacherFromSubject,
 
         getStudentUser,
         getTeacherUser,
