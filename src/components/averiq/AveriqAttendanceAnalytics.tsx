@@ -35,7 +35,6 @@ import {
   Tooltip,
   CartesianGrid
 } from 'recharts';
-import { academicStudents, academicTeachers } from '../../data/mockAcademicData';
 import { useIMS } from '../../context/IMSContext';
 
 interface AttendanceEntry {
@@ -65,7 +64,7 @@ const AVAILABLE_CLASSES = [
 ];
 
 export const AveriqAttendanceAnalytics: React.FC = () => {
-  const { showToast } = useIMS();
+  const { showToast, academicStudents, academicTeachers, updateStudentAttendanceRecord } = useIMS();
 
   // Search & Batch filter for main overview table
   const [searchTerm, setSearchTerm] = useState('');
@@ -391,10 +390,11 @@ export const AveriqAttendanceAnalytics: React.FC = () => {
 
       setRecentSavedSessions(prev => [newLog, ...prev]);
 
-      // Update in-memory academicStudents
+      // Update context academicStudents state
       targetClassStudents.forEach(s => {
         const entry = attendanceMap[s.id];
         if (entry) {
+          updateStudentAttendanceRecord(s.id, entry.status);
           if (entry.status === 'PRESENT') {
             s.attendance.presentDays = (s.attendance.presentDays || 0) + 1;
             s.attendance.totalWorkingDays = (s.attendance.totalWorkingDays || 0) + 1;
@@ -1131,12 +1131,15 @@ export const AveriqAttendanceAnalytics: React.FC = () => {
                 <Tooltip
                   formatter={(val: number) => [`${val}%`, 'Attendance']}
                   contentStyle={{
-                    backgroundColor: '#0F172A',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    fontSize: '12px'
+                    backgroundColor: '#0b1538',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '12px',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
                   }}
+                  itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 500 }}
+                  labelStyle={{ color: '#ffffff', fontWeight: 700 }}
                 />
                 <Bar dataKey="attendance" fill="#0056D6" radius={[6, 6, 0, 0]} maxBarSize={45} />
               </BarChart>

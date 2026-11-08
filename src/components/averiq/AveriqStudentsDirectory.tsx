@@ -29,16 +29,23 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { useIMS } from '../../context/IMSContext';
-import { academicStudents, academicParents } from '../../data/mockAcademicData';
+import { academicParents } from '../../data/mockAcademicData';
 import { DetailedStudent } from '../../types/academic';
 import { InteractivePieChart } from '../charts/InteractivePieChart';
 import { SemesterComparisonChart } from '../charts/SemesterComparisonChart';
 import { HomeworkService } from '../../services/homeworkService';
 import { CoachingCenterExcelModal } from './CoachingCenterExcelModal';
+import { AveriqAddStudentModal, AddStudentFormData } from './AveriqAddStudentModal';
 
 export const AveriqStudentsDirectory: React.FC = () => {
-  const { showToast } = useIMS();
-  const [studentsList, setStudentsList] = useState<DetailedStudent[]>(academicStudents);
+  const {
+    showToast,
+    academicStudents,
+    addAcademicStudent,
+    updateAcademicStudent,
+    deleteAcademicStudent
+  } = useIMS();
+  const studentsList = academicStudents;
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('All');
   const [selectedStudent, setSelectedStudent] = useState<DetailedStudent | null>(null);
@@ -121,6 +128,108 @@ export const AveriqStudentsDirectory: React.FC = () => {
     if (e) e.stopPropagation();
     setStudentToDelete(student);
     setIsDeleteModalOpen(true);
+  };
+
+  // Handle New Student from Comprehensive Averiq Modal
+  const handleAddNewStudentFromModal = (data: AddStudentFormData) => {
+    const netFee = Math.max(0, data.totalFee - data.scholarship);
+    const newStudent: DetailedStudent = {
+      id: `stu-${Date.now()}`,
+      studentCode: `STU-2026-${String(studentsList.length + 1).padStart(3, '0')}`,
+      rollNumber: String(studentsList.length + 1),
+      name: data.name,
+      gender: data.gender === 'OTHER' ? 'FEMALE' : data.gender,
+      dateOfBirth: data.dob || '2010-06-15',
+      bloodGroup: data.bloodGroup || 'B+',
+      gradeLevel: data.gradeLevel,
+      section: data.batchName || 'Section A',
+      batchName: `${data.gradeLevel} - ${data.batchName} (${data.board})`,
+      batchId: `batch-${data.gradeLevel.toLowerCase().replace(/\s+/g, '')}`,
+      status: 'Active',
+      parentName: data.parentName || 'Parent / Guardian',
+      parentId: `par-${Date.now()}`,
+      phone: data.phone,
+      email: data.email || `${data.name.toLowerCase().replace(/\s+/g, '.')}@student.averiq.edu`,
+      address: data.address,
+      semesters: {
+        sem1: {
+          semesterId: 'sem1',
+          semesterName: 'Term 1 Mid-Year Examination',
+          academicYear: '2025-26',
+          totalMarks: 420,
+          maxMarks: 500,
+          percentage: 84,
+          gpa: 8.4,
+          grade: 'A',
+          rank: 10,
+          attendancePct: 94,
+          status: 'Passed',
+          remarks: 'Good academic aptitude demonstrated.',
+          subjects: [
+            { subject: 'Mathematics', code: 'MTH-101', maxMarks: 100, marksObtained: 88, percentage: 88, grade: 'A', credits: 4, gradePoint: 9, remarks: 'Strong fundamentals' },
+            { subject: 'Science', code: 'SCI-101', maxMarks: 100, marksObtained: 82, percentage: 82, grade: 'A', credits: 4, gradePoint: 8, remarks: 'Active lab participation' },
+            { subject: 'Social Science', code: 'SST-101', maxMarks: 100, marksObtained: 84, percentage: 84, grade: 'A', credits: 3, gradePoint: 8, remarks: 'Thorough answers' },
+            { subject: 'English', code: 'ENG-101', maxMarks: 100, marksObtained: 86, percentage: 86, grade: 'A', credits: 3, gradePoint: 9, remarks: 'Fluent presentation' },
+            { subject: 'Second Language', code: 'LAN-101', maxMarks: 100, marksObtained: 80, percentage: 80, grade: 'A', credits: 3, gradePoint: 8, remarks: 'Satisfactory' }
+          ]
+        },
+        sem2: {
+          semesterId: 'sem2',
+          semesterName: 'Term 2 Final Assessment',
+          academicYear: '2025-26',
+          totalMarks: 445,
+          maxMarks: 500,
+          percentage: 89,
+          gpa: 8.9,
+          grade: 'A',
+          rank: 7,
+          attendancePct: 96,
+          status: 'Distinction',
+          remarks: 'Consistent excellence across all terms.',
+          subjects: [
+            { subject: 'Mathematics', code: 'MTH-101', maxMarks: 100, marksObtained: 92, percentage: 92, grade: 'A+', credits: 4, gradePoint: 10, remarks: 'Distinction' },
+            { subject: 'Science', code: 'SCI-101', maxMarks: 100, marksObtained: 88, percentage: 88, grade: 'A', credits: 4, gradePoint: 9, remarks: 'Clear practical mastery' },
+            { subject: 'Social Science', code: 'SST-101', maxMarks: 100, marksObtained: 90, percentage: 90, grade: 'A+', credits: 3, gradePoint: 10, remarks: 'Well-articulated' },
+            { subject: 'English', code: 'ENG-101', maxMarks: 100, marksObtained: 91, percentage: 91, grade: 'A+', credits: 3, gradePoint: 10, remarks: 'Outstanding essays' },
+            { subject: 'Second Language', code: 'LAN-101', maxMarks: 100, marksObtained: 84, percentage: 84, grade: 'A', credits: 3, gradePoint: 8, remarks: 'Commendable' }
+          ]
+        }
+      },
+      fees: {
+        tuitionFee: Math.round(netFee * 0.7),
+        laboratoryFee: Math.round(netFee * 0.1),
+        libraryFee: Math.round(netFee * 0.05),
+        sportsFee: Math.round(netFee * 0.05),
+        transportFee: Math.round(netFee * 0.05),
+        examFee: Math.round(netFee * 0.05),
+        totalFee: netFee,
+        paidFee: 0,
+        pendingFee: netFee,
+        dueDate: '15 Nov 2026',
+        status: 'OVERDUE',
+        transactions: []
+      },
+      attendance: {
+        totalWorkingDays: 95,
+        presentDays: 90,
+        absentDays: 3,
+        lateDays: 2,
+        excusedDays: 0,
+        overallPercentage: 95,
+        sem1Percentage: 94,
+        sem2Percentage: 96,
+        monthlyTrends: [
+          { month: 'Jun', workingDays: 22, presentDays: 21, absentDays: 1, lateDays: 0, percentage: 95 },
+          { month: 'Jul', workingDays: 25, presentDays: 24, absentDays: 1, lateDays: 0, percentage: 96 },
+          { month: 'Aug', workingDays: 24, presentDays: 23, absentDays: 1, lateDays: 0, percentage: 96 },
+          { month: 'Sep', workingDays: 24, presentDays: 22, absentDays: 0, lateDays: 2, percentage: 92 }
+        ]
+      }
+    };
+
+    addAcademicStudent(newStudent);
+    setIsAddModalOpen(false);
+    showToast(`Registered new student ${newStudent.name} (${newStudent.studentCode}) successfully.`);
   };
 
   // Save New Student
@@ -242,7 +351,7 @@ export const AveriqStudentsDirectory: React.FC = () => {
       }
     };
 
-    setStudentsList([newStudent, ...studentsList]);
+    addAcademicStudent(newStudent);
     setIsAddModalOpen(false);
     showToast(`Registered new student ${newStudent.name} (${newStudent.studentCode}) successfully.`);
   };
@@ -255,36 +364,30 @@ export const AveriqStudentsDirectory: React.FC = () => {
     const pending = Math.max(0, studentFormData.totalFee - studentFormData.paidFee);
     const calculatedFeeStatus: 'PAID' | 'PARTIAL' | 'OVERDUE' = pending === 0 ? 'PAID' : studentFormData.paidFee > 0 ? 'PARTIAL' : 'OVERDUE';
 
-    const updated = studentsList.map(s => {
-      if (s.id === studentToEdit.id) {
-        return {
-          ...s,
-          name: studentFormData.name,
-          rollNumber: studentFormData.rollNumber,
-          gender: studentFormData.gender,
-          gradeLevel: studentFormData.gradeLevel,
-          section: studentFormData.section,
-          batchName: `${studentFormData.gradeLevel} ${studentFormData.section} (${studentFormData.board})`,
-          parentName: studentFormData.parentName,
-          phone: studentFormData.phone,
-          email: studentFormData.email,
-          address: studentFormData.address,
-          fees: {
-            ...s.fees,
-            totalFee: studentFormData.totalFee,
-            paidFee: studentFormData.paidFee,
-            pendingFee: pending,
-            status: calculatedFeeStatus
-          }
-        };
+    const updatedRecord: DetailedStudent = {
+      ...studentToEdit,
+      name: studentFormData.name,
+      rollNumber: studentFormData.rollNumber,
+      gender: studentFormData.gender,
+      gradeLevel: studentFormData.gradeLevel,
+      section: studentFormData.section,
+      batchName: `${studentFormData.gradeLevel} ${studentFormData.section} (${studentFormData.board})`,
+      parentName: studentFormData.parentName,
+      phone: studentFormData.phone,
+      email: studentFormData.email,
+      address: studentFormData.address,
+      fees: {
+        ...studentToEdit.fees,
+        totalFee: studentFormData.totalFee,
+        paidFee: studentFormData.paidFee,
+        pendingFee: pending,
+        status: calculatedFeeStatus
       }
-      return s;
-    });
+    };
 
-    setStudentsList(updated);
+    updateAcademicStudent(updatedRecord);
     if (selectedStudent && selectedStudent.id === studentToEdit.id) {
-      const refreshed = updated.find(s => s.id === studentToEdit.id);
-      if (refreshed) setSelectedStudent(refreshed);
+      setSelectedStudent(updatedRecord);
     }
     setIsEditModalOpen(false);
     showToast(`Updated student profile for ${studentFormData.name}.`);
@@ -296,7 +399,7 @@ export const AveriqStudentsDirectory: React.FC = () => {
     const studentName = studentToDelete.name;
     const studentCode = studentToDelete.studentCode;
 
-    setStudentsList(prev => prev.filter(s => s.id !== studentToDelete.id));
+    deleteAcademicStudent(studentToDelete.id);
     if (selectedStudent && selectedStudent.id === studentToDelete.id) {
       setSelectedStudent(null);
     }
@@ -328,8 +431,8 @@ export const AveriqStudentsDirectory: React.FC = () => {
   // Grade Distribution Pie Data
   const gradeDistributionData = useMemo(() => {
     const counts = { 'A+ (90%+)': 0, 'A (80-89%)': 0, 'B+ (70-79%)': 0, 'B (60-69%)': 0, 'C (<60%)': 0 };
-    academicStudents.forEach(s => {
-      const avg = (s.semesters.sem1.percentage + s.semesters.sem2.percentage) / 2;
+    studentsList.forEach(s => {
+      const avg = ((s.semesters?.sem1?.percentage || 75) + (s.semesters?.sem2?.percentage || 80)) / 2;
       if (avg >= 90) counts['A+ (90%+)']++;
       else if (avg >= 80) counts['A (80-89%)']++;
       else if (avg >= 70) counts['B+ (70-79%)']++;
@@ -344,17 +447,17 @@ export const AveriqStudentsDirectory: React.FC = () => {
       { name: 'B (60-69%)', value: counts['B (60-69%)'], color: '#F57C00' },
       { name: 'C (<60%)', value: counts['C (<60%)'], color: '#EF4444' }
     ];
-  }, []);
+  }, [studentsList]);
 
   // Class Enrollment Pie Data
   const classEnrollmentData = useMemo(() => {
     return [
-      { name: 'Class 10A (Science)', value: academicStudents.filter(s => s.batchId === 'batch-10a').length, color: '#0056D6' },
-      { name: 'Class 10B (Science)', value: academicStudents.filter(s => s.batchId === 'batch-10b').length, color: '#0284C7' },
-      { name: 'Class 9A (Foundation)', value: academicStudents.filter(s => s.batchId === 'batch-9a').length, color: '#7C3AED' },
-      { name: 'Class 8A (General)', value: academicStudents.filter(s => s.batchId === 'batch-8a').length, color: '#10B981' }
+      { name: 'Class 10A (Science)', value: studentsList.filter(s => s.batchId === 'batch-10a' || s.gradeLevel === 'Class 10').length, color: '#0056D6' },
+      { name: 'Class 10B (Science)', value: studentsList.filter(s => s.batchId === 'batch-10b').length, color: '#0284C7' },
+      { name: 'Class 9A (Foundation)', value: studentsList.filter(s => s.batchId === 'batch-9a' || s.gradeLevel === 'Class 9').length, color: '#7C3AED' },
+      { name: 'Class 8A (General)', value: studentsList.filter(s => s.batchId === 'batch-8a' || s.gradeLevel === 'Class 8').length, color: '#10B981' }
     ];
-  }, []);
+  }, [studentsList]);
 
   const linkedParent = useMemo(() => {
     if (!selectedStudent) return null;
@@ -364,208 +467,12 @@ export const AveriqStudentsDirectory: React.FC = () => {
   // Reusable CRUD Modals for Student Registration, Editing, and Deletion
   const renderStudentModals = () => (
     <>
-      {/* 1. REGISTER NEW STUDENT MODAL */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-5 animate-scaleUp my-8">
-            <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                  <UserPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Register New Student</h3>
-                  <p className="text-xs text-slate-500">Enroll a new student profile with academic and fee details</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveAddStudent} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Aarav Sharma"
-                    value={studentFormData.name}
-                    onChange={e => setStudentFormData({ ...studentFormData, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Student Code
-                  </label>
-                  <input
-                    type="text"
-                    value={studentFormData.studentCode}
-                    onChange={e => setStudentFormData({ ...studentFormData, studentCode: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Roll Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 51"
-                    value={studentFormData.rollNumber}
-                    onChange={e => setStudentFormData({ ...studentFormData, rollNumber: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Gender
-                  </label>
-                  <select
-                    value={studentFormData.gender}
-                    onChange={e => setStudentFormData({ ...studentFormData, gender: e.target.value as 'MALE' | 'FEMALE' })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="MALE">Male</option>
-                    <option value="FEMALE">Female</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Class / Grade Level
-                  </label>
-                  <select
-                    value={studentFormData.gradeLevel}
-                    onChange={e => setStudentFormData({ ...studentFormData, gradeLevel: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {['1st Standard', '2nd Standard', '3rd Standard', '4th Standard', '5th Standard', '6th Standard', '7th Standard', '8th Standard', '9th Standard', '10th Standard', '11th Standard', '12th Standard'].map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Section & Curriculum Board
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={studentFormData.section}
-                      onChange={e => setStudentFormData({ ...studentFormData, section: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="A">Section A</option>
-                      <option value="B">Section B</option>
-                      <option value="C">Section C</option>
-                    </select>
-                    <select
-                      value={studentFormData.board}
-                      onChange={e => setStudentFormData({ ...studentFormData, board: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="CBSE">CBSE</option>
-                      <option value="ICSE">ICSE</option>
-                      <option value="State Board">State Board</option>
-                      <option value="IB">IB</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Parent / Guardian Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Ramesh Sharma"
-                    value={studentFormData.parentName}
-                    onChange={e => setStudentFormData({ ...studentFormData, parentName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Contact Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    value={studentFormData.phone}
-                    onChange={e => setStudentFormData({ ...studentFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Total Annual Fee (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={studentFormData.totalFee}
-                    onChange={e => setStudentFormData({ ...studentFormData, totalFee: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Initial Fee Amount Deposited (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={studentFormData.paidFee}
-                    onChange={e => setStudentFormData({ ...studentFormData, paidFee: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Residential Address
-                </label>
-                <input
-                  type="text"
-                  value={studentFormData.address}
-                  onChange={e => setStudentFormData({ ...studentFormData, address: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer"
-                >
-                  Confirm & Register Student
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* 1. REGISTER NEW STUDENT MODAL (Expanded Averiq Multi-Section Modal) */}
+      <AveriqAddStudentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={handleAddNewStudentFromModal}
+      />
 
       {/* 2. EDIT STUDENT MODAL */}
       {isEditModalOpen && studentToEdit && (

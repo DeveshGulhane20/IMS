@@ -43,7 +43,6 @@ import {
   Cell,
 } from 'recharts';
 import { useIMS } from '../../context/IMSContext';
-import { academicStudents } from '../../data/mockAcademicData';
 
 interface FeeStructureRow {
   id: string;
@@ -62,7 +61,7 @@ interface FeeStructureRow {
 }
 
 export const AveriqFeeManagement: React.FC = () => {
-  const { showToast } = useIMS();
+  const { showToast, academicStudents, recordStudentFeePayment } = useIMS();
 
   // Top sub-nav tabs: 'class' | 'term' | 'overall'
   const [topSubTab, setTopSubTab] = useState<'class' | 'term' | 'overall'>('class');
@@ -84,6 +83,12 @@ export const AveriqFeeManagement: React.FC = () => {
   const [feeToDelete, setFeeToDelete] = useState<FeeStructureRow | null>(null);
 
   const [activeFeeRow, setActiveFeeRow] = useState<FeeStructureRow | null>(null);
+
+  // Receipt Generation Form State
+  const [receiptStudentId, setReceiptStudentId] = useState<string>('');
+  const [receiptAmount, setReceiptAmount] = useState<number>(15000);
+  const [receiptMode, setReceiptMode] = useState<'Cash' | 'UPI' | 'Card' | 'Bank'>('UPI');
+  const [receiptRef, setReceiptRef] = useState<string>('TXN-2026-98124');
 
   // Initial Data configured to exact 4 active classes summing to precisely 50 students
   const [feeStructures, setFeeStructures] = useState<FeeStructureRow[]>([
@@ -163,7 +168,7 @@ export const AveriqFeeManagement: React.FC = () => {
       totalPendingAmount: totalPending,
       totalDueStudentsCount: totalDue
     };
-  }, []);
+  }, [academicStudents]);
 
   // Form for Add/Edit Fee Structure
   const [formData, setFormData] = useState({
@@ -647,12 +652,15 @@ export const AveriqFeeManagement: React.FC = () => {
                     <Tooltip
                       formatter={(val: any) => [`₹ ${val} Lakhs`, '']}
                       contentStyle={{
-                        backgroundColor: '#0F172A',
-                        border: 'none',
-                        borderRadius: '10px',
-                        color: '#fff',
-                        fontSize: '11px'
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
                       }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 500 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
                     />
                     <Bar dataKey="total" fill="#0056D6" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="paid" fill="#10B981" radius={[4, 4, 0, 0]} />
@@ -1521,12 +1529,23 @@ export const AveriqFeeManagement: React.FC = () => {
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Select Student
                 </label>
-                <select className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 font-bold focus:outline-none">
-                  <option>Rohan Sharma (Class 10A • STU-1001)</option>
-                  <option>Priya Patel (Class 10A • STU-1002)</option>
-                  <option>Aarav Verma (Class 10B • STU-1003)</option>
-                  <option>Ananya Deshmukh (Class 9A • STU-1004)</option>
-                  <option>Devansh Joshi (Class 8A • STU-1008)</option>
+                <select
+                  value={receiptStudentId || (academicStudents[0]?.id || '')}
+                  onChange={e => {
+                    const selId = e.target.value;
+                    setReceiptStudentId(selId);
+                    const st = academicStudents.find(s => s.id === selId);
+                    if (st && st.fees?.pendingFee) {
+                      setReceiptAmount(Math.min(st.fees.pendingFee, 25000));
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold focus:outline-none"
+                >
+                  {academicStudents.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.gradeLevel} • {s.studentCode}) — Pending: ₹{s.fees?.pendingFee?.toLocaleString('en-IN') || 0}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1537,7 +1556,8 @@ export const AveriqFeeManagement: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    defaultValue={25000}
+                    value={receiptAmount}
+                    onChange={e => setReceiptAmount(Number(e.target.value))}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 font-mono focus:outline-none"
                   />
                 </div>
@@ -1545,11 +1565,15 @@ export const AveriqFeeManagement: React.FC = () => {
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Payment Mode
                   </label>
-                  <select className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none">
-                    <option>UPI / Online Transfer</option>
-                    <option>Net Banking (NEFT/RTGS)</option>
-                    <option>Debit / Credit Card</option>
-                    <option>Cash / Cheque</option>
+                  <select
+                    value={receiptMode}
+                    onChange={e => setReceiptMode(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 focus:outline-none"
+                  >
+                    <option value="UPI">UPI / Online Transfer</option>
+                    <option value="Bank">Net Banking (NEFT/RTGS)</option>
+                    <option value="Card">Debit / Credit Card</option>
+                    <option value="Cash">Cash / Cheque</option>
                   </select>
                 </div>
               </div>
@@ -1560,7 +1584,8 @@ export const AveriqFeeManagement: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  defaultValue="TXN-2026-98124"
+                  value={receiptRef}
+                  onChange={e => setReceiptRef(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-200 font-mono focus:outline-none"
                 />
               </div>
@@ -1577,7 +1602,11 @@ export const AveriqFeeManagement: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  showToast('Official stamped fee receipt generated and ready for print.');
+                  const targetStudent = academicStudents.find(s => s.id === (receiptStudentId || academicStudents[0]?.id)) || academicStudents[0];
+                  if (targetStudent) {
+                    recordStudentFeePayment(targetStudent.name, receiptAmount, receiptMode, receiptRef);
+                    showToast(`Official fee receipt generated and ₹${receiptAmount.toLocaleString('en-IN')} payment recorded for ${targetStudent.name}.`);
+                  }
                   setIsReceiptModalOpen(false);
                 }}
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/30 flex items-center gap-1.5"

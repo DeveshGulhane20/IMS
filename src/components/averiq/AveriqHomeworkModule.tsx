@@ -26,7 +26,6 @@ import {
   Trash2
 } from 'lucide-react';
 import { HomeworkService, ClassHomework } from '../../services/homeworkService';
-import { academicStudents, academicTeachers } from '../../data/mockAcademicData';
 import { useIMS } from '../../context/IMSContext';
 
 const AVAILABLE_CLASSES = [
@@ -45,7 +44,7 @@ const AVAILABLE_SUBJECTS = [
 ];
 
 export const AveriqHomeworkModule: React.FC = () => {
-  const { showToast } = useIMS();
+  const { showToast, academicStudents, academicTeachers } = useIMS();
 
   // Homework list state
   const [homeworkList, setHomeworkList] = useState<ClassHomework[]>([]);

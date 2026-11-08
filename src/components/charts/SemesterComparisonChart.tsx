@@ -141,12 +141,15 @@ export const SemesterComparisonChart: React.FC<SemesterComparisonChartProps> = (
             <Tooltip
               formatter={(val: number, name: string) => [`${val} / 100`, name]}
               contentStyle={{
-                backgroundColor: '#0F172A',
-                border: 'none',
-                borderRadius: '8px',
-                color: '#fff',
-                fontSize: '12px'
+                backgroundColor: '#0b1538',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '12px',
+                color: '#ffffff',
+                fontSize: '12px',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
               }}
+              itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+              labelStyle={{ color: '#ffffff', fontWeight: 700 }}
             />
             <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
             {(viewMode === 'both' || viewMode === 'sem1') && (

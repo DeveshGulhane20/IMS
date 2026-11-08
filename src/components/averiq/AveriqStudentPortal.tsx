@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useIMS } from '../../context/IMSContext';
 import {
   CheckSquare,
@@ -28,7 +28,6 @@ import {
   Wallet
 } from 'lucide-react';
 import { SemesterComparisonChart } from '../charts/SemesterComparisonChart';
-import { academicStudents } from '../../data/mockAcademicData';
 import { HomeworkService } from '../../services/homeworkService';
 
 interface AveriqStudentPortalProps {
@@ -39,12 +38,18 @@ interface AveriqStudentPortalProps {
 export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
   onNavigateTab
 }) => {
-  const { showToast } = useIMS();
+  const { showToast, academicStudents, recordStudentFeePayment } = useIMS();
 
   // Dynamic Student record linked to Rohan Sharma (stu-001)
-  const [studentRecord, setStudentRecord] = useState(() => 
-    academicStudents.find(s => s.id === 'stu-001') || academicStudents[0]
-  );
+  const studentRecord = useMemo(() => 
+    academicStudents.find(s => s.id === 'stu-001') || academicStudents[0] || {
+      id: 'stu-001',
+      name: 'Rohan Sharma',
+      fees: { pendingFee: 0, paidFee: 0, totalFee: 45000, transactions: [] },
+      semesters: { sem1: { percentage: 85, subjects: [] }, sem2: { percentage: 89, subjects: [] } },
+      attendance: { overallPercentage: 94 }
+    } as any
+  , [academicStudents]);
 
   // Dynamic Homework summary from HomeworkService
   const [homeworkSummary, setHomeworkSummary] = useState(() => 
@@ -59,8 +64,6 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
   // Listen to system-wide cross-role updates
   useEffect(() => {
     const handleSync = () => {
-      const match = academicStudents.find(s => s.id === 'stu-001') || academicStudents[0];
-      setStudentRecord({ ...match });
       setHomeworkSummary(HomeworkService.getStudentHomeworkSummary('stu-001', 'batch-10a'));
     };
 
@@ -94,25 +97,12 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
       setIsPayingFee(false);
       setIsFeeModalOpen(false);
 
-      const match = academicStudents.find(s => s.id === 'stu-001') || academicStudents[0];
-      match.fees.paidFee += payFeeAmount;
-      match.fees.transactions.unshift({
-        id: `txn-${Date.now()}`,
-        receiptNo: `REC-${Date.now().toString().slice(-6)}`,
-        amount: payFeeAmount,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        mode: 'UPI',
-        status: 'Completed',
-        referenceNo: `REF-${Date.now().toString().slice(-6)}`,
-        description: 'Term Fee Online Settlement'
-      });
-
-      setStudentRecord({ ...match });
+      recordStudentFeePayment(studentRecord.name || 'Rohan Sharma', payFeeAmount, 'UPI');
       window.dispatchEvent(new CustomEvent('averiq_fees_updated', {
         detail: { studentId: 'stu-001', amount: payFeeAmount }
       }));
       showToast(`Fee payment of ₹${payFeeAmount.toLocaleString('en-IN')} completed successfully!`);
-    }, 1000);
+    }, 600);
   };
 
   const studentName = studentRecord.name || 'Rohan Sharma';
@@ -943,9 +933,9 @@ export const AveriqStudentPortal: React.FC<AveriqStudentPortalProps> = ({
             {showSemesterChart ? (
               <div className="pt-2">
                 <SemesterComparisonChart
-                  sem1={academicStudents[0].semesters.sem1}
-                  sem2={academicStudents[0].semesters.sem2}
-                  studentName="Rohan Sharma"
+                  sem1={studentRecord.semesters?.sem1 || academicStudents[0]?.semesters?.sem1}
+                  sem2={studentRecord.semesters?.sem2 || academicStudents[0]?.semesters?.sem2}
+                  studentName={studentRecord.name || "Rohan Sharma"}
                 />
               </div>
             ) : (

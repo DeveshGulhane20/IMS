@@ -25,7 +25,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { SemesterComparisonChart } from '../charts/SemesterComparisonChart';
-import { academicStudents } from '../../data/mockAcademicData';
+import { DetailedStudent } from '../../types/academic';
 import { HomeworkService } from '../../services/homeworkService';
 
 interface AveriqParentPortalProps {
@@ -34,11 +34,12 @@ interface AveriqParentPortalProps {
 }
 
 // Dynamic helper to build linked children profiles
-const buildChildrenFromAcademic = () => {
-  const rohan = academicStudents.find(s => s.id === 'stu-001') || academicStudents[0];
-  const ananya = academicStudents.find(s => s.id === 'stu-015' || s.name.includes('Ananya')) || academicStudents[14];
+const buildChildrenFromAcademic = (students: DetailedStudent[]) => {
+  if (!students || students.length === 0) return [];
+  const rohan = students.find(s => s.id === 'stu-001') || students[0];
+  const ananya = students.find(s => s.id === 'stu-015' || s.name.includes('Ananya')) || (students.length > 1 ? students[14] || students[1] : rohan);
 
-  const hwRohan = HomeworkService.getStudentHomeworkSummary('stu-001', 'batch-10a');
+  const hwRohan = HomeworkService.getStudentHomeworkSummary(rohan.id, rohan.batchId);
   const hwAnanya = HomeworkService.getStudentHomeworkSummary(ananya.id, ananya.batchId);
 
   return [
@@ -120,30 +121,39 @@ const buildChildrenFromAcademic = () => {
 export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
   onNavigateTab
 }) => {
-  const { showToast } = useIMS();
+  const { showToast, academicStudents, recordStudentFeePayment } = useIMS();
 
-  // Multi-child profiles synchronized dynamically
-  const [children, setChildren] = useState(buildChildrenFromAcademic);
+  // Multi-child profiles synchronized dynamically from reactive context
+  const children = useMemo(() => {
+    return buildChildrenFromAcademic(academicStudents);
+  }, [academicStudents]);
 
   const [selectedChildId, setSelectedChildId] = useState('rohan');
-  const activeChild = children.find(c => c.id === selectedChildId) || children[0];
-
-  // Cross-role synchronization
-  useEffect(() => {
-    const handleSync = () => {
-      setChildren(buildChildrenFromAcademic());
-    };
-
-    window.addEventListener('averiq_attendance_updated', handleSync);
-    window.addEventListener('averiq_homework_updated', handleSync);
-    window.addEventListener('averiq_fees_updated', handleSync);
-
-    return () => {
-      window.removeEventListener('averiq_attendance_updated', handleSync);
-      window.removeEventListener('averiq_homework_updated', handleSync);
-      window.removeEventListener('averiq_fees_updated', handleSync);
-    };
-  }, []);
+  const activeChild = children.find(c => c.id === selectedChildId) || children[0] || {
+    id: 'rohan',
+    studentId: 'stu-001',
+    batchId: 'batch-10a',
+    name: 'Rohan Sharma',
+    class: 'Class 10',
+    section: 'Class 10 | 10-A',
+    rollNo: '1001',
+    attendance: 94,
+    presentClasses: 188,
+    absentClasses: 12,
+    totalClasses: 200,
+    totalFee: 24000,
+    paidFee: 24000,
+    pendingFee: 0,
+    nextExam: 'Mathematics Unit Test 5',
+    nextExamDate: '12 Nov 2026',
+    avgScore: 78,
+    homeworkPending: 0,
+    homeworkCompleted: 5,
+    homeworkTotal: 5,
+    homeworkItems: [],
+    results: [],
+    timetable: []
+  };
 
   // Fee payment state
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -176,27 +186,7 @@ export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
       setIsPaySuccess(true);
 
       const targetId = activeChild.studentId;
-      const match = academicStudents.find(s => s.id === targetId);
-      if (match) {
-        match.fees.paidFee += payAmount;
-        match.fees.pendingFee = Math.max(0, match.fees.totalFee - match.fees.paidFee);
-        match.fees.transactions.unshift({
-          id: `txn-${Date.now()}`,
-          receiptNo: `REC-${Date.now().toString().slice(-6)}`,
-          amount: payAmount,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          mode: paymentMethod,
-          status: 'Completed',
-          referenceNo: `REF-${Date.now().toString().slice(-6)}`,
-          description: 'Term Fee Online Payment'
-        });
-      }
-
-      setChildren(buildChildrenFromAcademic());
-
-      window.dispatchEvent(new CustomEvent('averiq_fees_updated', {
-        detail: { studentId: targetId, amount: payAmount }
-      }));
+      recordStudentFeePayment(targetId, payAmount, paymentMethod);
 
       setTimeout(() => {
         setIsPaySuccess(false);
@@ -691,10 +681,10 @@ export const AveriqParentPortal: React.FC<AveriqParentPortalProps> = ({
               <div className="pt-2">
                 <SemesterComparisonChart
                   sem1={
-                    (selectedChildId === 'ananya' ? academicStudents[14] : academicStudents[0]).semesters.sem1
+                    (academicStudents.find(s => s.id === activeChild.studentId) || academicStudents[0])?.semesters?.sem1
                   }
                   sem2={
-                    (selectedChildId === 'ananya' ? academicStudents[14] : academicStudents[0]).semesters.sem2
+                    (academicStudents.find(s => s.id === activeChild.studentId) || academicStudents[0])?.semesters?.sem2
                   }
                   studentName={activeChild.name}
                 />

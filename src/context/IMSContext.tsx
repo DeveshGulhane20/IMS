@@ -60,8 +60,11 @@ import {
   mockFinanceTransactions,
   mockSubstituteAssignments
 } from '../data/mockData';
-import { academicTeachers as initialAcademicTeachers } from '../data/mockAcademicData';
-import { DetailedTeacher } from '../types/academic';
+import {
+  academicTeachers as initialAcademicTeachers,
+  academicStudents as initialAcademicStudents
+} from '../data/mockAcademicData';
+import { DetailedTeacher, DetailedStudent } from '../types/academic';
 import { computeStudentDiagnostics, StudentDiagnosticResult } from '../services/analyticsEngine';
 
 interface IMSContextType {
@@ -172,8 +175,19 @@ interface IMSContextType {
   addBatch: (name: string, courseName: string, teacherName: string) => void;
   addTimetableSlot: (slot: Omit<TimetableSlot, 'id'>) => boolean;
 
+  // Academic Master State & Real-Time Sync
+  academicStudents: DetailedStudent[];
+  addAcademicStudent: (student: DetailedStudent) => void;
+  updateAcademicStudent: (student: DetailedStudent) => void;
+  deleteAcademicStudent: (studentId: string) => void;
+  recordStudentFeePayment: (studentIdOrName: string, amount: number, mode: string, receiptNo?: string) => void;
+  updateStudentAttendanceRecord: (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => void;
+
   // Academic Faculty Directory & Curriculum Assignments
   academicTeachers: DetailedTeacher[];
+  addAcademicTeacher: (teacher: DetailedTeacher) => void;
+  updateAcademicTeacher: (teacher: DetailedTeacher) => void;
+  deleteAcademicTeacher: (teacherId: string) => void;
   assignTeacherToSubject: (
     teacherName: string,
     classId: string,
@@ -183,6 +197,17 @@ interface IMSContextType {
     gradeLevel: string
   ) => void;
   removeTeacherFromSubject: (classId: string, subjectName: string) => void;
+
+  // Single Source of Truth Computed Metrics
+  computedMetrics: {
+    totalStudents: number;
+    totalTeachers: number;
+    totalFeesBilled: number;
+    totalFeesCollected: number;
+    totalFeesPending: number;
+    feeCollectionRate: number;
+    overallAttendancePct: number;
+  };
 }
 
 const IMSContext = createContext<IMSContextType | undefined>(undefined);
@@ -247,6 +272,29 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>(mockFinanceTransactions);
   const [substitutes, setSubstitutes] = useState<SubstituteAssignment[]>(mockSubstituteAssignments);
   const [academicTeachersList, setAcademicTeachersList] = useState<DetailedTeacher[]>(initialAcademicTeachers);
+  const [academicStudentsList, setAcademicStudentsList] = useState<DetailedStudent[]>(initialAcademicStudents);
+
+  // Single Source of Truth Computed Metrics
+  const computedMetrics = useMemo(() => {
+    const totalStudents = academicStudentsList.length;
+    const totalTeachers = academicTeachersList.length;
+    const totalFeesBilled = academicStudentsList.reduce((acc, s) => acc + (s.fees?.totalFee || 0), 0);
+    const totalFeesCollected = academicStudentsList.reduce((acc, s) => acc + (s.fees?.paidFee || 0), 0);
+    const totalFeesPending = academicStudentsList.reduce((acc, s) => acc + (s.fees?.pendingFee || 0), 0);
+    const feeCollectionRate = totalFeesBilled > 0 ? Math.round((totalFeesCollected / totalFeesBilled) * 100) : 0;
+    const totalAttPct = academicStudentsList.reduce((acc, s) => acc + (s.attendance?.overallPercentage || 90), 0);
+    const overallAttendancePct = totalStudents > 0 ? Math.round(totalAttPct / totalStudents) : 92;
+
+    return {
+      totalStudents,
+      totalTeachers,
+      totalFeesBilled,
+      totalFeesCollected,
+      totalFeesPending,
+      feeCollectionRate,
+      overallAttendancePct
+    };
+  }, [academicStudentsList, academicTeachersList]);
 
   const setRole = (newRole: Role) => {
     setRoleState(newRole);
@@ -535,17 +583,18 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const collectFee = (studentName: string, amount: number, paymentMethod: 'Cash' | 'UPI' | 'Card' | 'Bank', referenceNo?: string) => {
+    const effectiveRef = referenceNo || `REF-${Math.floor(1000 + Math.random() * 9000)}`;
     const payment: FeePayment = {
       id: `pay-${Date.now()}`,
       studentName,
       amount,
       date: new Date().toISOString().split('T')[0],
       mode: paymentMethod,
-      referenceNo: referenceNo || `REF-${Math.floor(1000 + Math.random() * 9000)}`
+      referenceNo: effectiveRef
     };
     setFeePayments(prev => [payment, ...prev]);
 
-    // Also update student paidFee
+    // Update legacy student paidFee
     setStudents(prev =>
       prev.map(s => {
         if (s.name.toLowerCase() === studentName.toLowerCase()) {
@@ -555,7 +604,42 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
 
-    // Also record into finance transactions
+    // Update master academicStudentsList fees
+    const todayFormatted = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    setAcademicStudentsList(prev =>
+      prev.map(s => {
+        if (s.name.toLowerCase() === studentName.toLowerCase() || s.studentCode === studentName || s.id === studentName) {
+          const newPaid = (s.fees?.paidFee || 0) + amount;
+          const total = s.fees?.totalFee || (newPaid + 5000);
+          const newPending = Math.max(0, total - newPaid);
+          const newStatus = newPending === 0 ? 'PAID' : 'PARTIAL';
+          const newTx = {
+            id: `tx-${Date.now()}`,
+            receiptNo: effectiveRef,
+            date: todayFormatted,
+            amount,
+            mode: (['Cash', 'UPI', 'Card'].includes(paymentMethod) ? paymentMethod : 'UPI') as any,
+            status: 'Completed' as const,
+            referenceNo: effectiveRef,
+            description: 'Course Tuition Fee Installment'
+          };
+          return {
+            ...s,
+            fees: {
+              ...s.fees,
+              paidFee: newPaid,
+              pendingFee: newPending,
+              status: newStatus as any,
+              lastPaymentDate: todayFormatted,
+              transactions: [newTx, ...(s.fees?.transactions || [])]
+            }
+          };
+        }
+        return s;
+      })
+    );
+
+    // Record into finance transactions
     const fin: FinanceTransaction = {
       id: `fin-${Date.now()}`,
       type: 'Credit',
@@ -570,8 +654,12 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Payment of ₹${amount.toLocaleString('en-IN')} recorded for ${studentName}`);
   };
 
+  const recordStudentFeePayment = (studentIdOrName: string, amount: number, mode: string, receiptNo?: string) => {
+    collectFee(studentIdOrName, amount, (['Cash', 'UPI', 'Card', 'Bank'].includes(mode) ? mode : 'UPI') as any, receiptNo);
+  };
+
   const sendFeeReminders = () => {
-    const defaulters = students.filter(s => getStudentBalance(s.name) > 0);
+    const defaulters = academicStudentsList.filter(s => (s.fees?.pendingFee || 0) > 0);
     showToast(`Reminders queued for ${defaulters.length} parents (WhatsApp & SMS simulated)`);
     return defaulters.length;
   };
@@ -615,6 +703,132 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Notice published to circulars');
   };
 
+  const addAcademicStudent = (student: DetailedStudent) => {
+    setAcademicStudentsList(prev => [student, ...prev]);
+    const legacyProfile: StudentProfile = {
+      id: student.id,
+      userId: `u-${student.id}`,
+      name: student.name,
+      batchId: student.batchId || 'batch-10a',
+      batchName: student.batchName || 'Class 10A Science',
+      rollNumber: student.rollNumber,
+      admissionNumber: student.studentCode,
+      admissionDate: new Date().toISOString().split('T')[0],
+      gender: student.gender,
+      currentStreak: 0,
+      highestStreak: 0,
+      badgePoints: 50,
+      gradeLevel: student.gradeLevel,
+      status: student.status,
+      parentName: student.parentName,
+      phone: student.phone,
+      totalFee: student.fees?.totalFee || 45000,
+      paidFee: student.fees?.paidFee || 0
+    };
+    setStudents(prev => [legacyProfile, ...prev]);
+    showToast(`Student ${student.name} enrolled into Master Registry`);
+  };
+
+  const updateAcademicStudent = (updatedStudent: DetailedStudent) => {
+    setAcademicStudentsList(prev =>
+      prev.map(s => (s.id === updatedStudent.id ? updatedStudent : s))
+    );
+    setStudents(prev =>
+      prev.map(s =>
+        s.id === updatedStudent.id || s.name === updatedStudent.name
+          ? {
+              ...s,
+              name: updatedStudent.name,
+              gradeLevel: updatedStudent.gradeLevel,
+              batchName: updatedStudent.batchName,
+              parentName: updatedStudent.parentName,
+              phone: updatedStudent.phone,
+              totalFee: updatedStudent.fees?.totalFee || s.totalFee,
+              paidFee: updatedStudent.fees?.paidFee || s.paidFee,
+              status: updatedStudent.status
+            }
+          : s
+      )
+    );
+    showToast(`Profile updated for ${updatedStudent.name}`);
+  };
+
+  const deleteAcademicStudent = (studentId: string) => {
+    setAcademicStudentsList(prev => prev.filter(s => s.id !== studentId && s.studentCode !== studentId));
+    setStudents(prev => prev.filter(s => s.id !== studentId));
+    showToast(`Student record removed`);
+  };
+
+  const updateStudentAttendanceRecord = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => {
+    setAcademicStudentsList(prev =>
+      prev.map(s => {
+        if (s.id === studentId || s.studentCode === studentId || s.name === studentId) {
+          const totalW = s.attendance.totalWorkingDays + 1;
+          const presentD = status === 'PRESENT' ? s.attendance.presentDays + 1 : s.attendance.presentDays;
+          const absentD = status === 'ABSENT' ? s.attendance.absentDays + 1 : s.attendance.absentDays;
+          const lateD = status === 'LATE' ? s.attendance.lateDays + 1 : s.attendance.lateDays;
+          const newPct = Math.round((presentD / totalW) * 100);
+          return {
+            ...s,
+            attendance: {
+              ...s.attendance,
+              totalWorkingDays: totalW,
+              presentDays: presentD,
+              absentDays: absentD,
+              lateDays: lateD,
+              overallPercentage: newPct
+            }
+          };
+        }
+        return s;
+      })
+    );
+  };
+
+  const addAcademicTeacher = (teacher: DetailedTeacher) => {
+    setAcademicTeachersList(prev => [teacher, ...prev]);
+    const profile: TeacherProfile = {
+      id: teacher.id,
+      userId: `u-${teacher.id}`,
+      name: teacher.name,
+      employeeCode: teacher.employeeCode || `EMP-${teacher.id}`,
+      specialization: teacher.specialization,
+      qualification: teacher.qualification,
+      joiningDate: teacher.joiningDate,
+      workloadHoursPerWeek: teacher.workloadHoursPerWeek,
+      permittedModules: 'attendance,tests,homework,remarks'
+    };
+    setTeachers(prev => [profile, ...prev]);
+    showToast(`Faculty member ${teacher.name} added to Department`);
+  };
+
+  const updateAcademicTeacher = (updatedTeacher: DetailedTeacher) => {
+    setAcademicTeachersList(prev =>
+      prev.map(t => (t.id === updatedTeacher.id ? updatedTeacher : t))
+    );
+    setTeachers(prev =>
+      prev.map(t =>
+        t.id === updatedTeacher.id || t.name === updatedTeacher.name
+          ? {
+              ...t,
+              name: updatedTeacher.name,
+              specialization: updatedTeacher.specialization,
+              qualification: updatedTeacher.qualification,
+              workloadHoursPerWeek: updatedTeacher.workloadHoursPerWeek,
+              phone: updatedTeacher.phone
+            }
+          : t
+      )
+    );
+    showToast(`Faculty details updated for ${updatedTeacher.name}`);
+  };
+
+  const deleteAcademicTeacher = (teacherId: string) => {
+    setAcademicTeachersList(prev => prev.filter(t => t.id !== teacherId));
+    setTeachers(prev => prev.filter(t => t.id !== teacherId));
+    showToast(`Faculty record removed`);
+  };
+
   const enrollStudent = (studentData: {
     name: string;
     batchName: string;
@@ -623,15 +837,18 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     phone: string;
     totalFee: number;
   }) => {
-    const newId = `sp-${studentData.name.toLowerCase()}`;
-    const newStudent: StudentProfile = {
+    const codeNumber = String(academicStudentsList.length + 1).padStart(3, '0');
+    const studentCode = `STU-2025-${codeNumber}`;
+    const newId = `stu-${codeNumber}`;
+
+    const newStudentProfile: StudentProfile = {
       id: newId,
       userId: `u-${newId}`,
       name: studentData.name,
-      batchId: `batch-${studentData.batchName.toLowerCase()}`,
+      batchId: `batch-${studentData.batchName.toLowerCase().replace(/\s+/g, '-')}`,
       batchName: studentData.batchName,
       rollNumber: `${studentData.batchName}-${Math.floor(10 + Math.random() * 89)}`,
-      admissionNumber: `ADM-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 899)}`,
+      admissionNumber: `ADM-${new Date().getFullYear()}-${codeNumber}`,
       admissionDate: new Date().toISOString().split('T')[0],
       gender: 'MALE',
       currentStreak: 0,
@@ -644,7 +861,98 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalFee: studentData.totalFee,
       paidFee: 0
     };
-    setStudents(prev => [...prev, newStudent]);
+    setStudents(prev => [...prev, newStudentProfile]);
+
+    const newDetailedStudent: DetailedStudent = {
+      id: newId,
+      studentCode,
+      rollNumber: `${studentData.batchName || '10A'}-${codeNumber}`,
+      name: studentData.name,
+      avatarUrl: '',
+      gender: 'MALE',
+      dateOfBirth: '2010-05-15',
+      bloodGroup: 'B+',
+      gradeLevel: studentData.gradeLevel || 'Class 10',
+      section: 'A',
+      batchName: studentData.batchName || 'Class 10A Science',
+      batchId: `batch-${studentData.batchName.toLowerCase().replace(/\s+/g, '-')}`,
+      status: 'Admission',
+      parentName: studentData.parentName,
+      parentId: `par-${codeNumber}`,
+      phone: studentData.phone,
+      email: `${studentData.name.toLowerCase().replace(/\s+/g, '.')}@averiq.edu`,
+      address: 'City Campus Residential Zone, Sector 4',
+      semesters: {
+        sem1: {
+          semesterId: 'sem1',
+          semesterName: 'Semester 1 (Mid-Term 2025)',
+          academicYear: '2025-2026',
+          totalMarks: 410,
+          maxMarks: 500,
+          percentage: 82,
+          gpa: 8.2,
+          grade: 'A',
+          rank: 12,
+          attendancePct: 94,
+          subjects: [
+            { subject: 'Mathematics', code: 'MTH-101', maxMarks: 100, marksObtained: 85, percentage: 85, grade: 'A', credits: 4, gradePoint: 8.5, remarks: 'Good grasp' },
+            { subject: 'Physics', code: 'PHY-101', maxMarks: 100, marksObtained: 80, percentage: 80, grade: 'A', credits: 4, gradePoint: 8.0, remarks: 'Consistent' }
+          ],
+          status: 'Passed',
+          remarks: 'Good progress'
+        },
+        sem2: {
+          semesterId: 'sem2',
+          semesterName: 'Semester 2 (Final 2026)',
+          academicYear: '2025-2026',
+          totalMarks: 430,
+          maxMarks: 500,
+          percentage: 86,
+          gpa: 8.6,
+          grade: 'A',
+          rank: 10,
+          attendancePct: 96,
+          subjects: [
+            { subject: 'Mathematics', code: 'MTH-102', maxMarks: 100, marksObtained: 88, percentage: 88, grade: 'A', credits: 4, gradePoint: 8.8, remarks: 'Improved' },
+            { subject: 'Physics', code: 'PHY-102', maxMarks: 100, marksObtained: 85, percentage: 85, grade: 'A', credits: 4, gradePoint: 8.5, remarks: 'Very steady' }
+          ],
+          status: 'Passed',
+          remarks: 'Excellent progress'
+        }
+      },
+      fees: {
+        tuitionFee: Math.round(studentData.totalFee * 0.65),
+        laboratoryFee: Math.round(studentData.totalFee * 0.15),
+        libraryFee: Math.round(studentData.totalFee * 0.05),
+        sportsFee: Math.round(studentData.totalFee * 0.05),
+        transportFee: Math.round(studentData.totalFee * 0.05),
+        examFee: Math.round(studentData.totalFee * 0.05),
+        totalFee: studentData.totalFee,
+        paidFee: 0,
+        pendingFee: studentData.totalFee,
+        dueDate: '15 Nov 2025',
+        status: 'OVERDUE',
+        transactions: []
+      },
+      attendance: {
+        totalWorkingDays: 110,
+        presentDays: 102,
+        absentDays: 6,
+        lateDays: 2,
+        excusedDays: 0,
+        overallPercentage: 93,
+        sem1Percentage: 92,
+        sem2Percentage: 94,
+        monthlyTrends: [
+          { month: 'Jun', workingDays: 20, presentDays: 19, absentDays: 1, lateDays: 0, percentage: 95 },
+          { month: 'Jul', workingDays: 22, presentDays: 21, absentDays: 1, lateDays: 1, percentage: 95 },
+          { month: 'Aug', workingDays: 21, presentDays: 19, absentDays: 2, lateDays: 1, percentage: 90 },
+          { month: 'Sep', workingDays: 22, presentDays: 20, absentDays: 2, lateDays: 0, percentage: 91 },
+          { month: 'Oct', workingDays: 25, presentDays: 23, absentDays: 2, lateDays: 1, percentage: 92 }
+        ]
+      }
+    };
+    setAcademicStudentsList(prev => [newDetailedStudent, ...prev]);
     showToast(`Student ${studentData.name} enrolled in batch ${studentData.batchName}`);
   };
 
@@ -903,10 +1211,24 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         financeTransactions,
         substitutes,
 
+        // Master Academic Directory & Real-time State
+        academicStudents: academicStudentsList,
+        addAcademicStudent,
+        updateAcademicStudent,
+        deleteAcademicStudent,
+        recordStudentFeePayment,
+        updateStudentAttendanceRecord,
+
         // Academic Faculty Directory & Assignments
         academicTeachers: academicTeachersList,
+        addAcademicTeacher,
+        updateAcademicTeacher,
+        deleteAcademicTeacher,
         assignTeacherToSubject,
         removeTeacherFromSubject,
+
+        // Computed Real-Time Metrics (Single Source of Truth)
+        computedMetrics,
 
         getStudentUser,
         getTeacherUser,

@@ -13,7 +13,7 @@ import {
   X,
   Sparkles
 } from 'lucide-react';
-import { academicInquiries, academicMetrics } from '../../data/mockAcademicData';
+import { academicInquiries } from '../../data/mockAcademicData';
 import { InquiryRecord } from '../../types/academic';
 import { InteractivePieChart } from '../charts/InteractivePieChart';
 
@@ -29,6 +29,7 @@ export const AveriqInquiriesCRM: React.FC = () => {
     email: '',
     targetClass: 'Class 10',
     source: 'Website' as const,
+    leadStatus: 'Hot' as 'Hot' | 'Warm' | 'Cold',
     counselor: 'Pooja Tanna',
     notes: ''
   });
@@ -114,6 +115,7 @@ export const AveriqInquiriesCRM: React.FC = () => {
       email: '',
       targetClass: 'Class 10',
       source: 'Website',
+      leadStatus: 'Hot',
       counselor: 'Pooja Tanna',
       notes: ''
     });
@@ -268,106 +270,202 @@ export const AveriqInquiriesCRM: React.FC = () => {
 
       {/* Add Inquiry Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-blue-600" />
-                <span>Log New Admission Inquiry</span>
-              </h3>
+        <div className="fixed inset-0 z-50 bg-[#122D4A]/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-[22px] max-w-xl w-full border border-[#d5e8f7] dark:border-slate-800 p-6 space-y-4 shadow-[0_12px_35px_rgba(39,94,150,0.12)] text-[#122D4A] dark:text-slate-100 animate-scaleUp my-6">
+            <div className="flex items-center justify-between pb-3 border-b border-[#d5e8f7] dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-pink-50 text-pink-600 dark:bg-pink-950/40 dark:text-pink-400 border border-pink-200/60 flex items-center justify-center shadow-xs">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#173a5d] dark:text-white flex items-center gap-2">
+                    <span>Log Admission Inquiry</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300 border border-pink-200/60">
+                      CRM Intake
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#5A7184] dark:text-slate-400">
+                    Capture prospective student details, guardian contacts &amp; counseling status
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-[#173a5d] hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateInquiry} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleCreateInquiry} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="font-semibold block mb-1">Student Name</label>
+                  <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                    Candidate / Student Name *
+                  </label>
                   <input
                     type="text"
                     required
                     value={newInquiry.studentName}
                     onChange={e => setNewInquiry({ ...newInquiry, studentName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fbff] focus:bg-white border border-[#d5e8f7] rounded-xl text-xs sm:text-sm text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-xs"
                     placeholder="e.g. Aryan Sharma"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold block mb-1">Parent Name</label>
+                  <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                    Parent / Guardian Name
+                  </label>
                   <input
                     type="text"
                     value={newInquiry.parentName}
                     onChange={e => setNewInquiry({ ...newInquiry, parentName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fbff] focus:bg-white border border-[#d5e8f7] rounded-xl text-xs sm:text-sm text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-xs"
                     placeholder="e.g. Deepak Sharma"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="font-semibold block mb-1">Phone Number</label>
+                  <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                    Contact Phone Number *
+                  </label>
                   <input
                     type="tel"
                     required
                     value={newInquiry.phone}
                     onChange={e => setNewInquiry({ ...newInquiry, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fbff] focus:bg-white border border-[#d5e8f7] rounded-xl text-xs sm:text-sm font-mono text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-xs"
                     placeholder="+91 98250 12345"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold block mb-1">Target Class</label>
+                  <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={newInquiry.email}
+                    onChange={e => setNewInquiry({ ...newInquiry, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-[#f8fbff] focus:bg-white border border-[#d5e8f7] rounded-xl text-xs sm:text-sm text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-xs"
+                    placeholder="e.g. sharma.parent@gmail.com"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                    Target Class / Course
+                  </label>
                   <select
                     value={newInquiry.targetClass}
                     onChange={e => setNewInquiry({ ...newInquiry, targetClass: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fbff] focus:bg-white border border-[#d5e8f7] rounded-xl text-xs sm:text-sm text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-xs"
                   >
-                    <option>Class 10</option>
-                    <option>Class 9</option>
-                    <option>Class 8</option>
-                    <option>Class 11 Science</option>
+                    <option>Class 10 Foundation</option>
+                    <option>Class 9 Boards</option>
+                    <option>Class 8 Foundation</option>
+                    <option>Class 11 Science (JEE/NEET)</option>
+                    <option>Class 12 Science (Boards + Entrance)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                    Inquiry Source
+                  </label>
+                  <select
+                    value={newInquiry.source}
+                    onChange={e => setNewInquiry({ ...newInquiry, source: e.target.value as any })}
+                    className="w-full px-3.5 py-2.5 bg-[#f8fbff] focus:bg-white border border-[#d5e8f7] rounded-xl text-xs sm:text-sm text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-xs"
+                  >
+                    <option value="Website">Website Intake</option>
+                    <option value="Walk-in">Walk-in Campus</option>
+                    <option value="Referral">Student / Parent Referral</option>
+                    <option value="Social Media">Social Media Campaign</option>
+                    <option value="Education Expo">Education Expo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                    Lead Status
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(['Hot', 'Warm', 'Cold'] as const).map(status => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setNewInquiry({ ...newInquiry, leadStatus: status })}
+                        className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
+                          newInquiry.leadStatus === status
+                            ? status === 'Hot'
+                              ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+                              : status === 'Warm'
+                              ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
+                              : 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                            : 'bg-[#f8fbff] border-[#d5e8f7] text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {status === 'Hot' && '🔥 Hot'}
+                        {status === 'Warm' && '⚡ Warm'}
+                        {status === 'Cold' && '❄️ Cold'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                    Assigned Counselor
+                  </label>
+                  <select
+                    value={newInquiry.counselor}
+                    onChange={e => setNewInquiry({ ...newInquiry, counselor: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-[#f8fbff] focus:bg-white border border-[#d5e8f7] rounded-xl text-xs sm:text-sm text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-xs"
+                  >
+                    <option value="Pooja Tanna">Pooja Tanna (Senior Counselor)</option>
+                    <option value="Dr. Rajesh Sharma">Dr. Rajesh Sharma (Director)</option>
+                    <option value="Anand Verma">Anand Verma (Admissions Head)</option>
+                    <option value="Meera Iyer">Meera Iyer (Counseling Desk)</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="font-semibold block mb-1">Lead Source</label>
-                <select
-                  value={newInquiry.source}
-                  onChange={e => setNewInquiry({ ...newInquiry, source: e.target.value as any })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                >
-                  <option>Website</option>
-                  <option>Walk-in</option>
-                  <option>Referral</option>
-                  <option>Social Media</option>
-                  <option>Education Expo</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="font-semibold block mb-1">Notes / Requirement</label>
+                <label className="block text-xs font-bold text-[#173a5d] dark:text-slate-200 mb-1">
+                  Notes &amp; Remarks
+                </label>
                 <textarea
                   rows={2}
                   value={newInquiry.notes}
                   onChange={e => setNewInquiry({ ...newInquiry, notes: e.target.value })}
-                  placeholder="Parent requested weekend demo class details..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+                  placeholder="e.g. Parent requested weekend demo class details and installment plan..."
+                  className="w-full px-3.5 py-2.5 bg-[#f8fbff] focus:bg-white border border-[#d5e8f7] rounded-xl text-xs sm:text-sm text-[#173a5d] dark:bg-slate-800 dark:border-slate-700 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-xs"
                 />
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-md"
-              >
-                Log Inquiry Lead
-              </button>
+              <div className="pt-2 flex justify-end gap-2.5 border-t border-[#d5e8f7] dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#d5e8f7] dark:border-slate-700 text-xs font-semibold text-[#5A7184] dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-[0_4px_14px_rgba(219,39,119,0.25)] flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98]"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Log Admission Inquiry</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

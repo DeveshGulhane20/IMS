@@ -8,7 +8,6 @@ import {
   Menu,
   Smartphone,
   LogOut,
-  Sliders,
   CheckCircle2,
   AlertCircle,
   Calendar,
@@ -33,7 +32,6 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
 }) => {
   const {
     role,
-    setRole,
     currentUser,
     isMobilePreviewOpen,
     setMobilePreviewOpen,
@@ -436,72 +434,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                 </div>
               </div>
 
-              {/* Quick 1-Click Role Switcher */}
-              <div className="p-2 border-b border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                  Switch Active Portal Role:
-                </span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRole('ADMIN');
-                      onNavigateTab('dash');
-                      setIsProfileOpen(false);
-                    }}
-                    className={`px-2 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
-                      role === 'ADMIN' ? 'bg-blue-600 text-white' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    <span>Admin</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRole('TEACHER');
-                      onNavigateTab('dash');
-                      setIsProfileOpen(false);
-                    }}
-                    className={`px-2 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
-                      role === 'TEACHER' ? 'bg-purple-600 text-white' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                    <span>Teacher</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRole('STUDENT');
-                      onNavigateTab('dash');
-                      setIsProfileOpen(false);
-                    }}
-                    className={`px-2 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
-                      role === 'STUDENT' ? 'bg-emerald-600 text-white' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span>Student</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRole('PARENT');
-                      onNavigateTab('por');
-                      setIsProfileOpen(false);
-                    }}
-                    className={`px-2 py-1.5 rounded-lg text-left text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
-                      role === 'PARENT' ? 'bg-amber-600 text-white' : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span>Parent</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Utility Links */}
+              {/* Utility Links: Mobile Screen Simulator */}
               <div className="py-1.5 space-y-0.5">
                 <button
                   type="button"
@@ -509,21 +442,10 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                     setMobilePreviewOpen(!isMobilePreviewOpen);
                     setIsProfileOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer"
                 >
                   <Smartphone className="w-4 h-4 text-teal-400 shrink-0" />
                   <span>Mobile Screen Simulator</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onNavigateTab('set');
-                    setIsProfileOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition-colors"
-                >
-                  <Sliders className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span>Portal Settings</span>
                 </button>
               </div>
 
@@ -536,7 +458,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                       setIsProfileOpen(false);
                       onSwitchRole();
                     }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center gap-2.5 transition-colors font-medium"
+                    className="w-full text-left px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center gap-2.5 transition-colors font-medium cursor-pointer"
                   >
                     <LogOut className="w-4 h-4 shrink-0" />
                     <span>Sign Out</span>

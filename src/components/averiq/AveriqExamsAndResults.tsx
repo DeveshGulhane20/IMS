@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   FileCheck,
   Award,
@@ -46,7 +46,6 @@ import {
   Legend
 } from 'recharts';
 import { useIMS } from '../../context/IMSContext';
-import { academicStudents } from '../../data/mockAcademicData';
 
 export interface ExamItem {
   id: string;
@@ -85,7 +84,7 @@ interface AveriqExamsAndResultsProps {
 }
 
 export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ defaultTab = 'exams' }) => {
-  const { showToast } = useIMS();
+  const { showToast, academicStudents } = useIMS();
 
   // 1. Dual-Tab Top State
   const [activeMainTab, setActiveMainTab] = useState<'exams' | 'results'>(defaultTab);
@@ -587,6 +586,54 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
     });
   });
 
+  // Keep student results synced with reactive master student pool
+  useEffect(() => {
+    setRecentStudentResults(prev => {
+      const existingMap = new Map(prev.map(r => [r.id, r]));
+      return academicStudents.map((st, idx) => {
+        const existing = existingMap.get(`res-${st.id}`);
+        if (existing) {
+          return {
+            ...existing,
+            studentName: st.name,
+            classGrade: st.gradeLevel === 'Class 10' ? (st.section === 'A' ? 'Class 10A' : 'Class 10B') : st.gradeLevel === 'Class 9' ? 'Class 9A' : 'Class 8A',
+          };
+        }
+        const sem = st.semesters?.sem1;
+        const pct = sem ? sem.percentage : (70 + (idx % 25));
+        const marks = Math.round((pct / 100) * 50);
+        const isPassed = pct >= 50;
+        let grade = 'B';
+        if (pct >= 90) grade = 'A+';
+        else if (pct >= 80) grade = 'A';
+        else if (pct >= 70) grade = 'B+';
+        else if (pct >= 60) grade = 'B';
+        else if (pct >= 50) grade = 'C';
+        else grade = 'Below C';
+
+        const subjectList = ['Mathematics', 'Physics', 'Chemistry', 'English', 'Social Science'];
+        const subj = subjectList[idx % subjectList.length];
+
+        return {
+          id: `res-${st.id}`,
+          studentId: st.studentCode,
+          studentName: st.name,
+          avatarBg: st.gender === 'MALE' ? 'bg-blue-600' : 'bg-rose-600',
+          classGrade: st.gradeLevel === 'Class 10' ? (st.section === 'A' ? 'Class 10A' : 'Class 10B') : st.gradeLevel === 'Class 9' ? 'Class 9A' : 'Class 8A',
+          subject: subj,
+          marksObtained: marks,
+          maxMarks: 50,
+          percentage: pct,
+          status: isPassed ? 'Passed' : 'Needs Improvement',
+          resultDate: 'Oct 28, 2026',
+          examName: 'Pre-Board Mock 1',
+          gradeLetter: grade,
+          remarks: isPassed ? 'Consistently high conceptual comprehension and problem-solving.' : 'Needs remedial attention on foundational concepts.'
+        };
+      });
+    });
+  }, [academicStudents]);
+
   const filteredResults = useMemo(() => {
     return recentStudentResults.filter(item => {
       const matchSearch =
@@ -1065,12 +1112,15 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
                       </Pie>
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#0F172A',
-                          border: 'none',
-                          borderRadius: '8px',
-                          color: '#fff',
-                          fontSize: '12px'
+                          backgroundColor: '#0b1538',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '12px',
+                          color: '#ffffff',
+                          fontSize: '12px',
+                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
                         }}
+                        itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 700 }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -1118,12 +1168,15 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
                     <Tooltip
                       cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
                       contentStyle={{
-                        backgroundColor: '#0F172A',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: '#fff',
-                        fontSize: '12px'
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
                       }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
                     />
                     <Bar dataKey="examsCount" name="Exams Count" fill="#0056D6" radius={[6, 6, 0, 0]} />
                   </BarChart>
@@ -1595,12 +1648,15 @@ export const AveriqExamsAndResults: React.FC<AveriqExamsAndResultsProps> = ({ de
                     <YAxis domain={[60, 100]} tick={{ fontSize: 11 }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#0F172A',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: '#fff',
-                        fontSize: '12px'
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
                       }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
                     />
                     <Line
                       type="monotone"

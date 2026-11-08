@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useIMS } from '../../context/IMSContext';
 import {
   Users,
@@ -45,10 +45,7 @@ import {
 } from 'recharts';
 
 import {
-  academicMetrics,
-  academicEvents,
-  academicStudents,
-  academicTeachers
+  academicEvents
 } from '../../data/mockAcademicData';
 
 interface AveriqDashboardProps {
@@ -76,7 +73,16 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
   onNavigateTab,
   onOpenModal
 }) => {
-  const { students, teachers, feePayments, tests, showToast } = useIMS();
+  const {
+    students,
+    teachers,
+    feePayments,
+    tests,
+    showToast,
+    academicStudents,
+    academicTeachers,
+    computedMetrics
+  } = useIMS();
 
   // Dynamic Date and Time
   const [currentDateTime, setCurrentDateTime] = useState('');
@@ -104,6 +110,8 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
   // 1. Daily Attendance (7-Day at a time) State & Dataset
   const [attendanceClassFilter, setAttendanceClassFilter] = useState<string>('all');
 
+  const totalMasterStudents = computedMetrics.totalStudents || 50;
+
   const attendanceDataByClass: Record<
     string,
     { label: string; data: { day: string; fullDate: string; rate: number; present: number; total: number }[] }
@@ -111,13 +119,13 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
     all: {
       label: 'Campus Overall (All Classes)',
       data: [
-        { day: 'Mon', fullDate: '20 Oct', rate: 94, present: 47, total: 50 },
-        { day: 'Tue', fullDate: '21 Oct', rate: 96, present: 48, total: 50 },
-        { day: 'Wed', fullDate: '22 Oct', rate: 92, present: 46, total: 50 },
-        { day: 'Thu', fullDate: '23 Oct', rate: 98, present: 49, total: 50 },
-        { day: 'Fri', fullDate: '24 Oct', rate: 94, present: 47, total: 50 },
-        { day: 'Sat', fullDate: '25 Oct', rate: 88, present: 44, total: 50 },
-        { day: 'Sun', fullDate: '26 Oct', rate: 90, present: 45, total: 50 }
+        { day: 'Mon', fullDate: '20 Oct', rate: 94, present: Math.round(totalMasterStudents * 0.94), total: totalMasterStudents },
+        { day: 'Tue', fullDate: '21 Oct', rate: 96, present: Math.round(totalMasterStudents * 0.96), total: totalMasterStudents },
+        { day: 'Wed', fullDate: '22 Oct', rate: 92, present: Math.round(totalMasterStudents * 0.92), total: totalMasterStudents },
+        { day: 'Thu', fullDate: '23 Oct', rate: 98, present: Math.round(totalMasterStudents * 0.98), total: totalMasterStudents },
+        { day: 'Fri', fullDate: '24 Oct', rate: 94, present: Math.round(totalMasterStudents * 0.94), total: totalMasterStudents },
+        { day: 'Sat', fullDate: '25 Oct', rate: 88, present: Math.round(totalMasterStudents * 0.88), total: totalMasterStudents },
+        { day: 'Sun', fullDate: '26 Oct', rate: 90, present: Math.round(totalMasterStudents * 0.90), total: totalMasterStudents }
       ]
     },
     '10a': {
@@ -211,27 +219,37 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
     currentAttendanceData.data.reduce((acc, curr) => acc + curr.rate, 0) / currentAttendanceData.data.length
   );
 
-  // Fee collection Donut Chart Data from dynamic dataset
-  const feeDonutData = [
-    {
-      name: 'Collected',
-      value: academicMetrics.totalFeesCollected,
-      percentage: Math.round((academicMetrics.totalFeesCollected / academicMetrics.totalFeesBilled) * 100),
-      color: '#10B981'
-    },
-    {
-      name: 'Pending',
-      value: Math.round(academicMetrics.totalFeesPending * 0.7),
-      percentage: Math.round((academicMetrics.totalFeesPending * 0.7 / academicMetrics.totalFeesBilled) * 100),
-      color: '#F59E0B'
-    },
-    {
-      name: 'Overdue',
-      value: Math.round(academicMetrics.totalFeesPending * 0.3),
-      percentage: Math.round((academicMetrics.totalFeesPending * 0.3 / academicMetrics.totalFeesBilled) * 100),
-      color: '#EF4444'
-    }
-  ];
+  // Fee collection Donut Chart Data from Single Source of Truth
+  const feeDonutData = useMemo(() => {
+    const totalCollected = computedMetrics.totalFeesCollected;
+    const totalPending = computedMetrics.totalFeesPending;
+    const totalBilled = computedMetrics.totalFeesBilled || (totalCollected + totalPending) || 1;
+    const overdueAmt = academicStudents
+      .filter(s => s.fees?.status === 'OVERDUE')
+      .reduce((acc, s) => acc + (s.fees?.pendingFee || 0), 0) || Math.round(totalPending * 0.35);
+    const standardPending = Math.max(0, totalPending - overdueAmt);
+
+    return [
+      {
+        name: 'Collected',
+        value: totalCollected,
+        percentage: Math.round((totalCollected / totalBilled) * 100),
+        color: '#10B981'
+      },
+      {
+        name: 'Pending',
+        value: standardPending,
+        percentage: Math.round((standardPending / totalBilled) * 100),
+        color: '#F59E0B'
+      },
+      {
+        name: 'Overdue',
+        value: overdueAmt,
+        percentage: Math.round((overdueAmt / totalBilled) * 100),
+        color: '#EF4444'
+      }
+    ];
+  }, [academicStudents, computedMetrics]);
 
   // 3. Upcoming Events State (Initialized with mock events, expandable via calendar double-click)
   const [eventsList, setEventsList] = useState([
@@ -281,26 +299,28 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
     }
   ]);
 
-  // Top Performing Students data from dynamic dataset
-  const topStudents = [...academicStudents]
-    .sort((a, b) => {
-      const avgA = (a.semesters.sem1.percentage + a.semesters.sem2.percentage) / 2;
-      const avgB = (b.semesters.sem1.percentage + b.semesters.sem2.percentage) / 2;
-      return avgB - avgA;
-    })
-    .slice(0, 5)
-    .map((s, idx) => {
-      const avg = Math.round((s.semesters.sem1.percentage + s.semesters.sem2.percentage) / 2);
-      const colors = ['bg-blue-600', 'bg-indigo-600', 'bg-emerald-600', 'bg-purple-600', 'bg-teal-600'];
-      return {
-        rank: idx + 1,
-        name: s.name,
-        class: `${s.gradeLevel}-${s.section}`,
-        percentage: `${avg}%`,
-        initials: s.name.split(' ').map(n => n[0]).join(''),
-        avatarBg: colors[idx % colors.length]
-      };
-    });
+  // Top Performing Students data dynamically computed from academicStudents
+  const topStudents = useMemo(() => {
+    return [...academicStudents]
+      .sort((a, b) => {
+        const avgA = ((a.semesters?.sem1?.percentage || 75) + (a.semesters?.sem2?.percentage || 80)) / 2;
+        const avgB = ((b.semesters?.sem1?.percentage || 75) + (b.semesters?.sem2?.percentage || 80)) / 2;
+        return avgB - avgA;
+      })
+      .slice(0, 5)
+      .map((s, idx) => {
+        const avg = Math.round(((s.semesters?.sem1?.percentage || 75) + (s.semesters?.sem2?.percentage || 80)) / 2);
+        const colors = ['bg-blue-600', 'bg-indigo-600', 'bg-emerald-600', 'bg-purple-600', 'bg-teal-600'];
+        return {
+          rank: idx + 1,
+          name: s.name,
+          class: `${s.gradeLevel}-${s.section}`,
+          percentage: `${avg}%`,
+          initials: s.name.split(' ').map(n => n[0]).join(''),
+          avatarBg: colors[idx % colors.length]
+        };
+      });
+  }, [academicStudents]);
 
   // 2. "Students at Risk" Data (Evaluated on Attendance < 75%, Pending/Overdue Fees, Low Exam Results)
   const [riskFilter, setRiskFilter] = useState<'All' | 'Critical' | 'High'>('All');
@@ -562,12 +582,12 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums">
-              {academicMetrics.totalStudents}
+              {computedMetrics.totalStudents}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
               <span className="inline-flex items-center text-emerald-600 font-semibold font-mono">
                 <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                50 Active Codes
+                {computedMetrics.totalStudents} Active Codes
               </span>
               <span className="text-slate-500 dark:text-slate-400">Class 8-10</span>
             </div>
@@ -589,7 +609,7 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums">
-              {academicMetrics.totalTeachers}
+              {computedMetrics.totalTeachers}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
               <span className="inline-flex items-center text-emerald-600 font-semibold font-mono">
@@ -616,12 +636,12 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums">
-              ₹{academicMetrics.totalFeesCollected.toLocaleString('en-IN')}
+              ₹{computedMetrics.totalFeesCollected.toLocaleString('en-IN')}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
               <span className="inline-flex items-center text-emerald-600 font-semibold font-mono">
                 <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
-                {Math.round((academicMetrics.totalFeesCollected / academicMetrics.totalFeesBilled) * 100)}%
+                {computedMetrics.feeCollectionRate}%
               </span>
               <span className="text-slate-500 dark:text-slate-400">Collection rate</span>
             </div>
@@ -643,14 +663,14 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white font-mono tabular-nums">
-              ₹{academicMetrics.totalFeesPending.toLocaleString('en-IN')}
+              ₹{computedMetrics.totalFeesPending.toLocaleString('en-IN')}
             </div>
             <div className="mt-2 flex items-center gap-1.5 text-xs">
               <span className="inline-flex items-center text-amber-600 font-semibold font-mono">
                 <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />
                 Due 15 Nov
               </span>
-              <span className="text-slate-500 dark:text-slate-400">50 Ledgers</span>
+              <span className="text-slate-500 dark:text-slate-400">{computedMetrics.totalStudents} Ledgers</span>
             </div>
           </div>
         </div>
@@ -718,23 +738,45 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
                     />
                     <Tooltip
                       cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                      content={({ active, payload, label }: any) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const titleText = data?.fullDate ? `${label} (${data.fullDate})` : label;
+                          const presentCount = data?.present ?? 44;
+                          const totalCount = data?.total ?? 50;
+                          const rateVal = data?.rate ?? 88;
+                          return (
+                            <div
+                              className="px-3.5 py-2.5 rounded-xl pointer-events-none shadow-2xl border border-white/10"
+                              style={{
+                                backgroundColor: '#0b1538',
+                                color: '#ffffff',
+                                borderRadius: '12px',
+                                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
+                              }}
+                            >
+                              <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '12.5px', marginBottom: '3px' }}>
+                                {titleText}
+                              </div>
+                              <div style={{ color: '#ffffff', fontSize: '12px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ color: '#ffffff' }}>Attendance :</span>
+                                <span style={{ color: '#ffffff', fontWeight: 700 }}>{rateVal}%</span>
+                                <span style={{ color: '#e2e8f0', opacity: 0.95 }}>({presentCount}/{totalCount} Present)</span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
                       contentStyle={{
-                        backgroundColor: '#0F172A',
-                        borderColor: '#1E293B',
+                        backgroundColor: '#0b1538',
+                        borderColor: '#1e295d',
                         borderRadius: '12px',
                         color: '#FFFFFF',
                         fontSize: '12px'
                       }}
-                      formatter={(val: number, _name: string, props: any) => [
-                        `${val}% (${props.payload.present}/${props.payload.total} Present)`,
-                        'Attendance'
-                      ]}
-                      labelFormatter={(label: string, payload: any[]) => {
-                        if (payload && payload[0]) {
-                          return `${label} (${payload[0].payload.fullDate})`;
-                        }
-                        return label;
-                      }}
+                      itemStyle={{ color: '#FFFFFF', fontSize: '12px' }}
+                      labelStyle={{ color: '#FFFFFF', fontWeight: 700 }}
                     />
                     <Bar
                       dataKey="rate"
@@ -817,12 +859,15 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#0F172A',
-                        borderColor: '#1E293B',
+                        backgroundColor: '#0b1538',
+                        borderColor: '#1e295d',
                         borderRadius: '12px',
                         color: '#FFFFFF',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
                       }}
+                      itemStyle={{ color: '#FFFFFF', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#FFFFFF', fontWeight: 700 }}
                       formatter={(val: number) => [`₹${inr(val)}`, 'Amount']}
                     />
                   </PieChart>
@@ -831,13 +876,13 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
                 {/* Donut Center Metric */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">
-                    72%
+                    {computedMetrics.feeCollectionRate}%
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium">Collected</span>
                 </div>
               </div>
 
-              {/* Fee Legend with Amounts and Percentages */}
+              {/* Fee Legend with Dynamic Amounts and Percentages */}
               <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
                 <div>
                   <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
@@ -845,9 +890,11 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
                     <span>Paid</span>
                   </div>
                   <div className="text-xs font-bold font-mono text-slate-900 dark:text-white mt-0.5">
-                    ₹3.45L
+                    ₹{(computedMetrics.totalFeesCollected / 100000).toFixed(2)}L
                   </div>
-                  <div className="text-[10px] text-emerald-600 font-semibold font-mono">72%</div>
+                  <div className="text-[10px] text-emerald-600 font-semibold font-mono">
+                    {computedMetrics.feeCollectionRate}%
+                  </div>
                 </div>
 
                 <div>
@@ -856,9 +903,11 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
                     <span>Pending</span>
                   </div>
                   <div className="text-xs font-bold font-mono text-slate-900 dark:text-white mt-0.5">
-                    ₹89.4K
+                    ₹{(Math.round(computedMetrics.totalFeesPending * 0.65) / 1000).toFixed(1)}K
                   </div>
-                  <div className="text-[10px] text-amber-600 font-semibold font-mono">19%</div>
+                  <div className="text-[10px] text-amber-600 font-semibold font-mono">
+                    {Math.round((100 - computedMetrics.feeCollectionRate) * 0.65)}%
+                  </div>
                 </div>
 
                 <div>
@@ -867,9 +916,11 @@ export const AveriqDashboard: React.FC<AveriqDashboardProps> = ({
                     <span>Overdue</span>
                   </div>
                   <div className="text-xs font-bold font-mono text-slate-900 dark:text-white mt-0.5">
-                    ₹42.3K
+                    ₹{(Math.round(computedMetrics.totalFeesPending * 0.35) / 1000).toFixed(1)}K
                   </div>
-                  <div className="text-[10px] text-rose-600 font-semibold font-mono">9%</div>
+                  <div className="text-[10px] text-rose-600 font-semibold font-mono">
+                    {Math.max(0, 100 - computedMetrics.feeCollectionRate - Math.round((100 - computedMetrics.feeCollectionRate) * 0.65))}%
+                  </div>
                 </div>
               </div>
             </div>

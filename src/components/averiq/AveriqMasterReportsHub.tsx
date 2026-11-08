@@ -42,10 +42,9 @@ import {
   Legend
 } from 'recharts';
 import { useIMS } from '../../context/IMSContext';
-import { academicStudents, academicTeachers } from '../../data/mockAcademicData';
 
 export const AveriqMasterReportsHub: React.FC = () => {
-  const { showToast } = useIMS();
+  const { showToast, academicStudents, academicTeachers } = useIMS();
 
   // 1. Top Master Navigation Category Tabs
   const [activeReportCategory, setActiveReportCategory] = useState<'attendance' | 'fees' | 'results' | 'exams'>('attendance');
@@ -645,7 +644,18 @@ export const AveriqMasterReportsHub: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                     <XAxis dataKey="day" tick={{ fontSize: 11 }} />
                     <YAxis domain={[80, 100]} tick={{ fontSize: 11 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
+                      }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
+                    />
                     <Bar dataKey="students" name="Students %" fill="#0056D6" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="teachers" name="Faculty %" fill="#10B981" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -670,7 +680,18 @@ export const AveriqMasterReportsHub: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                     <YAxis domain={[90, 100]} tick={{ fontSize: 11 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
+                      }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
+                    />
                     <Line type="monotone" dataKey="overall" name="Overall %" stroke="#7C3AED" strokeWidth={3} dot={{ r: 4 }} />
                     <Line type="monotone" dataKey="teachers" name="Faculty %" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
                   </LineChart>
@@ -766,7 +787,19 @@ export const AveriqMasterReportsHub: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                     <XAxis dataKey="classGrade" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `₹${v}L`} />
-                    <Tooltip formatter={(v: any) => [`₹ ${v} Lakhs`, '']} contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
+                    <Tooltip
+                      formatter={(v: any) => [`₹ ${v} Lakhs`, '']}
+                      contentStyle={{
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
+                      }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
+                    />
                     <Bar dataKey="collected" name="Collected" fill="#10B981" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="pending" name="Pending" fill="#EF4444" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -904,7 +937,19 @@ export const AveriqMasterReportsHub: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                     <XAxis dataKey="grade" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: any) => [`${v} Students`, 'Count']} contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
+                    <Tooltip
+                      formatter={(v: any) => [`${v} Students`, 'Count']}
+                      contentStyle={{
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
+                      }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
+                    />
                     <Bar dataKey="count" name="Students" radius={[6, 6, 0, 0]}>
                       {resultsGradeDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -932,9 +977,18 @@ export const AveriqMasterReportsHub: React.FC = () => {
                   <BarChart data={resultsSubjectData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                     <XAxis dataKey="subject" tick={{ fontSize: 10 }} />
-                    <YAxis domain={[60, 100]} tick={{ fontSize: 11 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
-                    <Bar dataKey="avg" name="Average %" fill="#0056D6" radius={[4, 4, 0, 0]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
+                      }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
+                    />
                     <Bar dataKey="passRate" name="Pass Rate %" fill="#10B981" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -1063,9 +1117,18 @@ export const AveriqMasterReportsHub: React.FC = () => {
                   <BarChart data={examsDensityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
                     <XAxis dataKey="classGrade" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }} />
-                    <Bar dataKey="exams" name="Exams" fill="#0056D6" radius={[6, 6, 0, 0]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0b1538',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.55)'
+                      }}
+                      itemStyle={{ color: '#ffffff', fontSize: '12px', fontWeight: 600 }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 700 }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

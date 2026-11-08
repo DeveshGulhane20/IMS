@@ -30,19 +30,18 @@ import { useIMS } from '../../context/IMSContext';
 import { academicTeachers as fallbackTeachers } from '../../data/mockAcademicData';
 import { DetailedTeacher } from '../../types/academic';
 import { InteractivePieChart } from '../charts/InteractivePieChart';
+import { AveriqAddTeacherModal, AddTeacherFormData } from './AveriqAddTeacherModal';
 
 export const AveriqTeachersDirectory: React.FC = () => {
-  const { academicTeachers, showToast } = useIMS();
-  const initialList = academicTeachers && academicTeachers.length > 0 ? academicTeachers : fallbackTeachers;
-  const [teachersList, setTeachersList] = useState<DetailedTeacher[]>(initialList);
+  const {
+    academicTeachers,
+    addAcademicTeacher,
+    updateAcademicTeacher,
+    deleteAcademicTeacher,
+    showToast
+  } = useIMS();
+  const teachersList = academicTeachers && academicTeachers.length > 0 ? academicTeachers : fallbackTeachers;
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
-
-  // Sync when academicTeachers changes from subject assignment
-  React.useEffect(() => {
-    if (academicTeachers && academicTeachers.length > 0) {
-      setTeachersList(academicTeachers);
-    }
-  }, [academicTeachers]);
 
   // Modals state for CRUD
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -112,6 +111,45 @@ export const AveriqTeachersDirectory: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
+  const handleAddNewTeacherFromModal = (data: AddTeacherFormData) => {
+    const bgColors = ['bg-indigo-600', 'bg-blue-600', 'bg-purple-600', 'bg-emerald-600', 'bg-amber-600', 'bg-teal-600'];
+    const randomBg = bgColors[Math.floor(Math.random() * bgColors.length)];
+
+    const newTeacher: DetailedTeacher = {
+      id: `tea-${Date.now()}`,
+      employeeCode: data.employeeCode || `EMP-FAC-${String(teachersList.length + 1).padStart(2, '0')}`,
+      name: data.name,
+      designation: data.designation,
+      qualification: data.qualification,
+      specialization: data.specialization,
+      primarySubject: data.primarySubject || 'Physics',
+      department: data.department,
+      joiningDate: data.dateOfJoining ? new Date(data.dateOfJoining).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Nov 2026',
+      workloadHoursPerWeek: Number(data.workloadHoursPerWeek),
+      assignedBatches: ['Class 10A'],
+      assignedSubjects: [data.primarySubject || 'Physics'],
+      email: data.email || `${data.name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@averiq.edu`,
+      phone: data.phone,
+      rating: 4.9,
+      totalStudentsTaught: 120,
+      avatarBg: randomBg,
+      assignedClassesWithSubjects: [
+        {
+          classId: 'batch-10a',
+          className: 'Class 10-A',
+          subjectName: data.primarySubject || 'Physics',
+          board: 'CBSE',
+          gradeLevel: 'Class 10',
+          hoursPerWeek: Math.round(data.workloadHoursPerWeek / 2)
+        }
+      ]
+    };
+
+    addAcademicTeacher(newTeacher);
+    setIsAddModalOpen(false);
+    showToast(`Faculty member ${newTeacher.name} (${newTeacher.employeeCode}) onboarded successfully.`);
+  };
+
   const handleSaveAddTeacher = (e: React.FormEvent) => {
     e.preventDefault();
     if (!teacherFormData.name.trim()) {
@@ -170,7 +208,7 @@ export const AveriqTeachersDirectory: React.FC = () => {
       }
     };
 
-    setTeachersList([newTeacher, ...teachersList]);
+    addAcademicTeacher(newTeacher);
     setIsAddModalOpen(false);
     showToast(`Onboarded ${newTeacher.name} (${newTeacher.employeeCode}) to ${newTeacher.department}.`);
   };
@@ -179,24 +217,20 @@ export const AveriqTeachersDirectory: React.FC = () => {
     e.preventDefault();
     if (!teacherToEdit) return;
 
-    setTeachersList(prev =>
-      prev.map(t =>
-        t.id === teacherToEdit.id
-          ? {
-              ...t,
-              name: teacherFormData.name,
-              designation: teacherFormData.designation,
-              department: teacherFormData.department,
-              primarySubject: teacherFormData.primarySubject,
-              qualification: teacherFormData.qualification,
-              specialization: teacherFormData.specialization,
-              email: teacherFormData.email,
-              phone: teacherFormData.phone,
-              workloadHoursPerWeek: Number(teacherFormData.workloadHoursPerWeek)
-            }
-          : t
-      )
-    );
+    const updatedTeacher: DetailedTeacher = {
+      ...teacherToEdit,
+      name: teacherFormData.name,
+      designation: teacherFormData.designation,
+      department: teacherFormData.department,
+      primarySubject: teacherFormData.primarySubject,
+      qualification: teacherFormData.qualification,
+      specialization: teacherFormData.specialization,
+      email: teacherFormData.email,
+      phone: teacherFormData.phone,
+      workloadHoursPerWeek: Number(teacherFormData.workloadHoursPerWeek)
+    };
+
+    updateAcademicTeacher(updatedTeacher);
     setIsEditModalOpen(false);
     showToast(`Updated faculty profile for ${teacherFormData.name}.`);
   };
@@ -206,7 +240,7 @@ export const AveriqTeachersDirectory: React.FC = () => {
     const name = teacherToDelete.name;
     const code = teacherToDelete.employeeCode;
 
-    setTeachersList(prev => prev.filter(t => t.id !== teacherToDelete.id));
+    deleteAcademicTeacher(teacherToDelete.id);
     if (selectedTeacherId === teacherToDelete.id) {
       setSelectedTeacherId(null);
     }
@@ -232,191 +266,12 @@ export const AveriqTeachersDirectory: React.FC = () => {
   // Reusable CRUD Modals for Faculty Management
   const renderTeacherModals = () => (
     <>
-      {/* 1. ONBOARD NEW FACULTY MODAL */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-5 animate-scaleUp my-8">
-            <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
-                  <UserPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Onboard New Faculty Member</h3>
-                  <p className="text-xs text-slate-500">Register employee credentials, academic department, and subject specializations</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveAddTeacher} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Faculty Name (with Title) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Dr. Kavita Deshmukh"
-                    value={teacherFormData.name}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Employee Code
-                  </label>
-                  <input
-                    type="text"
-                    value={teacherFormData.employeeCode}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, employeeCode: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Department
-                  </label>
-                  <select
-                    value={teacherFormData.department}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, department: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="Department of Mathematics">Department of Mathematics</option>
-                    <option value="Department of Physical Sciences">Department of Physical Sciences</option>
-                    <option value="Department of Chemical Sciences">Department of Chemical Sciences</option>
-                    <option value="Department of Biological Sciences">Department of Biological Sciences</option>
-                    <option value="Department of Languages & Humanities">Department of Languages & Humanities</option>
-                    <option value="Department of Commerce & Economics">Department of Commerce & Economics</option>
-                    <option value="Department of Computer Science & AI">Department of Computer Science & AI</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Designation
-                  </label>
-                  <select
-                    value={teacherFormData.designation}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, designation: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="Senior Faculty">Senior Faculty</option>
-                    <option value="Head of Department (HOD)">Head of Department (HOD)</option>
-                    <option value="Associate Professor">Associate Professor</option>
-                    <option value="Assistant Professor">Assistant Professor</option>
-                    <option value="Guest Lecturer / Mentor">Guest Lecturer / Mentor</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Primary Teaching Subject *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Physics / Calculus"
-                    value={teacherFormData.primarySubject}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, primarySubject: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Workload Allocation (Hours / Week)
-                  </label>
-                  <input
-                    type="number"
-                    value={teacherFormData.workloadHoursPerWeek}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, workloadHoursPerWeek: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Academic Qualifications *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. M.Sc., Ph.D. in Physics"
-                    value={teacherFormData.qualification}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, qualification: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Specialization & Research Focus
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Astrophysics, Electrodynamics"
-                    value={teacherFormData.specialization}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, specialization: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Official Email
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="e.g. k.deshmukh@averiq.edu"
-                    value={teacherFormData.email}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Contact Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    value={teacherFormData.phone}
-                    onChange={e => setTeacherFormData({ ...teacherFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs cursor-pointer"
-                >
-                  Confirm & Onboard Faculty
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* 1. ONBOARD NEW FACULTY MODAL (Averiq Comprehensive Glacier Modal) */}
+      <AveriqAddTeacherModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={handleAddNewTeacherFromModal}
+      />
 
       {/* 2. EDIT FACULTY PROFILE MODAL */}
       {isEditModalOpen && teacherToEdit && (
