@@ -14,10 +14,13 @@ import {
   X,
   UserCheck,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  ShieldCheck,
+  Building2
 } from 'lucide-react';
 import { useIMS } from '../../context/IMSContext';
 import { Role } from '../../types/ims';
+import { AveriqTenantSwitcher } from './AveriqTenantSwitcher';
 
 interface AveriqTopNavProps {
   onToggleMobileSidebar: () => void;
@@ -180,6 +183,15 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
         color: 'from-emerald-600 to-teal-600'
       };
     }
+    if (role === 'SUPER_ADMIN') {
+      return {
+        initials: 'HQ',
+        name: 'Platform Super Admin',
+        email: 'superadmin@averiq.io',
+        roleLabel: 'Averiq Super Admin',
+        color: 'from-amber-500 to-orange-600'
+      };
+    }
     return {
       initials: 'AD',
       name: 'Administrator',
@@ -219,6 +231,12 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
             <PanelLeftClose className="w-5 h-5 text-slate-300 group-hover:text-white transition-colors" />
           )}
         </button>
+
+        {/* Multi-Tenant Active Institute Switcher */}
+        <AveriqTenantSwitcher
+          onOpenSuperAdmin={() => onNavigateTab('super_dash')}
+          className="shrink-0"
+        />
       </div>
 
       {/* Center Area: Global Search Input */}
@@ -434,7 +452,7 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                 </div>
               </div>
 
-              {/* Utility Links: Mobile Screen Simulator */}
+              {/* Utility Links: Mobile Screen Simulator & Super Admin Link */}
               <div className="py-1.5 space-y-0.5">
                 <button
                   type="button"
@@ -446,6 +464,18 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                 >
                   <Smartphone className="w-4 h-4 text-teal-400 shrink-0" />
                   <span>Mobile Screen Simulator</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    onNavigateTab('super_dash');
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-amber-300 hover:bg-amber-950/40 hover:text-amber-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Super Admin Control Center</span>
                 </button>
               </div>
 

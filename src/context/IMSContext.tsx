@@ -64,6 +64,11 @@ import {
   academicTeachers as initialAcademicTeachers,
   academicStudents as initialAcademicStudents
 } from '../data/mockAcademicData';
+import {
+  initialInstitutes,
+  shapersAcademyTeachers,
+  shapersAcademyStudents
+} from '../data/mockMultiTenantData';
 import { DetailedTeacher, DetailedStudent } from '../types/academic';
 import { computeStudentDiagnostics, StudentDiagnosticResult } from '../services/analyticsEngine';
 
@@ -198,6 +203,15 @@ interface IMSContextType {
   ) => void;
   removeTeacherFromSubject: (classId: string, subjectName: string) => void;
 
+  // Multi-Tenant Cloud Architecture
+  institutes: Institute[];
+  activeInstituteId: string;
+  activeInstitute: Institute;
+  switchInstitute: (instituteId: string) => void;
+  provisionInstitute: (newInst: Omit<Institute, 'id'>) => Institute;
+  updateInstitute: (inst: Institute) => void;
+  deleteInstitute: (instituteId: string) => void;
+
   // Single Source of Truth Computed Metrics
   computedMetrics: {
     totalStudents: number;
@@ -271,8 +285,110 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [ptmMeetings, setPtmMeetings] = useState<PTMMeeting[]>(mockPTMs);
   const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>(mockFinanceTransactions);
   const [substitutes, setSubstitutes] = useState<SubstituteAssignment[]>(mockSubstituteAssignments);
-  const [academicTeachersList, setAcademicTeachersList] = useState<DetailedTeacher[]>(initialAcademicTeachers);
-  const [academicStudentsList, setAcademicStudentsList] = useState<DetailedStudent[]>(initialAcademicStudents);
+  // Multi-Tenant Cloud State & Tenant Maps
+  const [institutesList, setInstitutesList] = useState<Institute[]>(initialInstitutes);
+  const [activeInstituteId, setActiveInstituteId] = useState<string>('inst-av-achievers');
+
+  const [tenantStudentsMap, setTenantStudentsMap] = useState<Record<string, DetailedStudent[]>>({
+    'inst-av-achievers': initialAcademicStudents,
+    'inst-shapers-academy': shapersAcademyStudents
+  });
+  const [tenantTeachersMap, setTenantTeachersMap] = useState<Record<string, DetailedTeacher[]>>({
+    'inst-av-achievers': initialAcademicTeachers,
+    'inst-shapers-academy': shapersAcademyTeachers
+  });
+
+  const activeInstitute = useMemo(() => {
+    return institutesList.find(i => i.id === activeInstituteId) || institutesList[0];
+  }, [institutesList, activeInstituteId]);
+
+  const academicStudentsList = tenantStudentsMap[activeInstituteId] || initialAcademicStudents;
+  const academicTeachersList = tenantTeachersMap[activeInstituteId] || initialAcademicTeachers;
+
+  const setAcademicStudentsList = (updater: DetailedStudent[] | ((prev: DetailedStudent[]) => DetailedStudent[])) => {
+    setTenantStudentsMap(prev => {
+      const current = prev[activeInstituteId] || initialAcademicStudents;
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return {
+        ...prev,
+        [activeInstituteId]: next
+      };
+    });
+  };
+
+  const setAcademicTeachersList = (updater: DetailedTeacher[] | ((prev: DetailedTeacher[]) => DetailedTeacher[])) => {
+    setTenantTeachersMap(prev => {
+      const current = prev[activeInstituteId] || initialAcademicTeachers;
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return {
+        ...prev,
+        [activeInstituteId]: next
+      };
+    });
+  };
+
+  const switchInstitute = (instituteId: string) => {
+    const target = institutesList.find(i => i.id === instituteId);
+    if (!target) return;
+    setActiveInstituteId(instituteId);
+    showToast(`Switched active tenant to ${target.name}`);
+  };
+
+  const provisionInstitute = (newInst: Omit<Institute, 'id'>): Institute => {
+    const newId = `inst-${newInst.code.toLowerCase().replace(/[^a-z0-9]/g, '-') || Date.now()}`;
+    const fullInst: Institute = {
+      ...newInst,
+      id: newId,
+      status: newInst.status || 'Active',
+      createdAt: newInst.createdAt || new Date().toISOString().split('T')[0]
+    };
+
+    setInstitutesList(prev => [fullInst, ...prev]);
+
+    // Seed default sample cohort for the new tenant
+    const seedStudents: DetailedStudent[] = initialAcademicStudents.slice(0, 15).map((st, idx) => ({
+      ...st,
+      id: `stu-${newInst.code.toLowerCase()}-${idx + 1}`,
+      studentCode: `${newInst.code}-2025-${String(idx + 1).padStart(3, '0')}`,
+      board: newInst.board || 'CBSE'
+    }));
+
+    const seedTeachers: DetailedTeacher[] = initialAcademicTeachers.slice(0, 3).map((tch, idx) => ({
+      ...tch,
+      id: `fac-${newInst.code.toLowerCase()}-${idx + 1}`,
+      employeeCode: `${newInst.code}-FAC-${String(idx + 1).padStart(2, '0')}`
+    }));
+
+    setTenantStudentsMap(prev => ({
+      ...prev,
+      [newId]: seedStudents
+    }));
+
+    setTenantTeachersMap(prev => ({
+      ...prev,
+      [newId]: seedTeachers
+    }));
+
+    return fullInst;
+  };
+
+  const updateInstitute = (updated: Institute) => {
+    setInstitutesList(prev => prev.map(i => i.id === updated.id ? updated : i));
+    showToast(`Updated details for ${updated.name}`);
+  };
+
+  const deleteInstitute = (instId: string) => {
+    if (institutesList.length <= 1) {
+      showToast('Cannot delete the last remaining institute tenant');
+      return;
+    }
+    setInstitutesList(prev => prev.filter(i => i.id !== instId));
+    if (activeInstituteId === instId) {
+      const remaining = institutesList.filter(i => i.id !== instId)[0];
+      if (remaining) setActiveInstituteId(remaining.id);
+    }
+    showToast('Institute tenant removed from platform');
+  };
 
   // Single Source of Truth Computed Metrics
   const computedMetrics = useMemo(() => {
@@ -298,7 +414,8 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setRole = (newRole: Role) => {
     setRoleState(newRole);
-    if (newRole === 'ADMIN') setCurrentUserId('u-admin');
+    if (newRole === 'SUPER_ADMIN') setCurrentUserId('u-superadmin');
+    else if (newRole === 'ADMIN') setCurrentUserId('u-admin');
     else if (newRole === 'TEACHER') setCurrentUserId('u-teacher-mehta');
     else if (newRole === 'STUDENT') setCurrentUserId('u-student-aarav');
     else if (newRole === 'PARENT') setCurrentUserId('u-parent-aarav');
@@ -1183,7 +1300,14 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsSidebarCollapsed,
         toggleSidebarCollapse,
 
-        institute,
+        institute: activeInstitute,
+        institutes: institutesList,
+        activeInstituteId,
+        activeInstitute,
+        switchInstitute,
+        provisionInstitute,
+        updateInstitute,
+        deleteInstitute,
         users,
         teachers,
         students,

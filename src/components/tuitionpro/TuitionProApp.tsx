@@ -71,6 +71,7 @@ import { AveriqCommunications } from '../averiq/AveriqCommunications';
 import { AveriqRolesPermissions } from '../averiq/AveriqRolesPermissions';
 import { AveriqHomeworkModule } from '../averiq/AveriqHomeworkModule';
 import { AveriqMasterReportsHub } from '../averiq/AveriqMasterReportsHub';
+import { AveriqSuperAdminControlCenter } from '../averiq/AveriqSuperAdminControlCenter';
 
 interface TuitionProAppProps {
   onSwitchRole?: () => void;
@@ -146,8 +147,14 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
     addTimetableSlot
   } = useIMS();
 
-  const [activeTab, setActiveTab] = useState<string>('dash');
+  const [activeTab, setActiveTab] = useState<string>(() => role === 'SUPER_ADMIN' ? 'super_dash' : 'dash');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (role === 'SUPER_ADMIN') {
+      setActiveTab('super_dash');
+    }
+  }, [role]);
   const [quickModal, setQuickModal] = useState<'student' | 'teacher' | 'attendance' | 'fee' | 'exam' | 'inquiry' | 'help' | null>(null);
   const [activeReportsSubTab, setActiveReportsSubTab] = useState<'mk' | 'pf'>('mk');
   const [activeSettingsSubTab, setActiveSettingsSubTab] = useState<'crs' | 'usr' | 'tb' | 'mat' | 'ptm' | 'fin'>('crs');
@@ -406,8 +413,17 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
+          {/* SUPER ADMIN HQ TAB */}
+          {activeTab === 'super_dash' && (
+            <AveriqSuperAdminControlCenter
+              onEnterInstitute={(id) => {
+                setActiveTab('dash');
+              }}
+            />
+          )}
+
           {/* TAB 1: AVERIQ REDESIGNED DASHBOARD (ROLE-ADAPTIVE) */}
-          {(activeTab === 'dash' || activeTab === 'por') && (
+          {activeTab !== 'super_dash' && (activeTab === 'dash' || activeTab === 'por') && (
             role === 'STUDENT' ? (
               <AveriqStudentPortal
                 onNavigateTab={(tabId) => {

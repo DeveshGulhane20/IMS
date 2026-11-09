@@ -107,6 +107,21 @@ const ROLE_CONFIGS: Record<Role, RoleConfig> = {
     sampleName: 'Mr. & Mrs. Sharma',
     sampleDetail: 'Ward: Rohan Sharma (Class 10A)',
     description: 'Daily attendance status, online fee payment receipts & teacher feedback.'
+  },
+  SUPER_ADMIN: {
+    role: 'SUPER_ADMIN',
+    title: 'Averiq Platform Super Admin',
+    shortTitle: 'Super Admin',
+    badge: 'Multi-Tenant HQ',
+    badgeColor: 'bg-[#FEF3C7] text-[#D97706] border-[#FDE68A]',
+    icon: ShieldCheck,
+    gradient: 'from-[#D97706] to-[#122D4A]',
+    identifierLabel: 'Super Admin Master Email',
+    identifierPlaceholder: 'superadmin@averiq.io',
+    defaultIdentifier: 'superadmin@averiq.io',
+    sampleName: 'Averiq Platform Director',
+    sampleDetail: 'Multi-Tenant Cloud Operations & Provisioning',
+    description: 'Global multi-tenant control center: provision new institutes, manage cloud databases, subscription tiers, and tenant switching.'
   }
 };
 
@@ -349,9 +364,9 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
                   </span>
                 </div>
 
-                {/* Single, Intuitive 4-Role Segmented Selector Tabs */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-[#F0F5FA] rounded-2xl border border-[#E2EDF8]">
-                  {(['PARENT', 'STUDENT', 'TEACHER', 'ADMIN'] as Role[]).map((r) => {
+                {/* Single, Intuitive 5-Role Segmented Selector Tabs */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 p-1.5 bg-[#F0F5FA] rounded-2xl border border-[#E2EDF8]">
+                  {(['PARENT', 'STUDENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN'] as Role[]).map((r) => {
                     const cfg = ROLE_CONFIGS[r];
                     const Icon = cfg.icon;
                     const isActive = selectedRole === r;
@@ -366,8 +381,8 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
                             : 'text-[#5A7184] hover:text-[#122D4A] hover:bg-white/60'
                         }`}
                       >
-                        <Icon className={`w-4 h-4 mb-1 transition-colors ${isActive ? 'text-[#3979C5]' : 'text-[#8EA0B4]'}`} />
-                        <span>{cfg.shortTitle}</span>
+                        <Icon className={`w-4 h-4 mb-1 transition-colors ${isActive ? (r === 'SUPER_ADMIN' ? 'text-[#D97706]' : 'text-[#3979C5]') : 'text-[#8EA0B4]'}`} />
+                        <span className="truncate">{cfg.shortTitle}</span>
                       </button>
                     );
                   })}

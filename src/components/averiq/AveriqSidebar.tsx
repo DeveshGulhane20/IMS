@@ -47,7 +47,7 @@ export const AveriqSidebar: React.FC<AveriqSidebarProps> = ({
   onOpenHelp,
   currentRole
 }) => {
-  const { role: contextRole, isSidebarCollapsed, toggleSidebarCollapse } = useIMS();
+  const { role: contextRole, isSidebarCollapsed, toggleSidebarCollapse, activeInstitute } = useIMS();
   const effectiveRole = currentRole || contextRole;
 
   // Navigation Items customized precisely by role
@@ -98,8 +98,26 @@ export const AveriqSidebar: React.FC<AveriqSidebarProps> = ({
       ];
     }
 
+    if (effectiveRole === 'SUPER_ADMIN') {
+      return [
+        { id: 'super_dash', label: 'Super Admin HQ', icon: ShieldCheck, badge: 'Global' },
+        { id: 'dash', label: 'Institute Dashboard', icon: LayoutDashboard },
+        { id: 'cls', label: 'Subject and Classes', icon: Layers },
+        { id: 'stu', label: 'Students Roster', icon: Users },
+        { id: 'tea', label: 'Teachers Directory', icon: GraduationCap },
+        { id: 'hw', label: 'Homework Module', icon: ClipboardList },
+        { id: 'att', label: 'Attendance Logs', icon: CheckSquare },
+        { id: 'fee', label: 'Fee Management', icon: CreditCard },
+        { id: 'ex', label: 'Exams & Results', icon: FileCheck },
+        { id: 'rep', label: 'Reports Hub', icon: BarChart3 },
+        { id: 'roles', label: 'Roles & Security', icon: ShieldCheck },
+        { id: 'set', label: 'Platform Settings', icon: Settings }
+      ];
+    }
+
     // Default: Administrator
     return [
+      { id: 'super_dash', label: 'Super Admin HQ', icon: ShieldCheck, badge: 'Cloud' },
       { id: 'dash', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'cls', label: 'Subject and Classes', icon: Layers, badge: '12' },
       { id: 'stu', label: 'Students', icon: Users, badge: '50' },
@@ -166,20 +184,26 @@ export const AveriqSidebar: React.FC<AveriqSidebarProps> = ({
               /* Expanded Header: Full Official AV Achievers Branding only */
               <div className="flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  {/* Official AV Achievers Logo Image */}
+                  {/* Official Active Institute Logo Image */}
                   <div className="w-11 h-11 rounded-xl bg-white p-1 shadow-md ring-1 ring-white/20 shrink-0 overflow-hidden flex items-center justify-center">
-                    <img
-                      src={AV_ACHIEVERS_LOGO}
-                      alt="AV Achievers"
-                      className="w-full h-full object-contain"
-                    />
+                    {activeInstitute?.logoUrl ? (
+                      <img
+                        src={activeInstitute.logoUrl}
+                        alt={activeInstitute.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span className="font-black text-sm text-[#3979C5]">
+                        {activeInstitute?.code?.slice(0, 3) || 'AVA'}
+                      </span>
+                    )}
                   </div>
 
                   {/* Primary Logo Text & Single-Line Subtitle */}
                   <div className="flex flex-col min-w-0 leading-tight">
                     <div className="flex items-center leading-none">
-                      <span className="font-black text-[15px] sm:text-base tracking-tight text-white whitespace-nowrap">
-                        AV <span className="text-[#F97316]">ACHIEVERS</span>
+                      <span className="font-black text-[15px] sm:text-base tracking-tight text-white whitespace-nowrap truncate max-w-[155px]">
+                        {activeInstitute?.name || 'AV ACHIEVERS'}
                       </span>
                     </div>
                     <div className="text-[9.5px] font-bold tracking-wider uppercase text-sky-300 whitespace-nowrap mt-1 leading-tight">

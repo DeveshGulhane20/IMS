@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
@@ -16,6 +16,8 @@ export interface Institute {
   id: string;
   name: string;
   code: string;
+  type?: 'K12 School' | 'Coaching Academy' | 'Junior College' | 'International School' | 'Test Prep';
+  board?: 'CBSE' | 'ICSE' | 'State Board' | 'IB International' | 'Integrated JEE/NEET';
   address?: string;
   phone?: string;
   email: string;
@@ -23,6 +25,12 @@ export interface Institute {
   campusCount: number;
   totalStudents: number;
   totalFaculty: number;
+  status?: 'Active' | 'Trial' | 'Suspended';
+  plan?: 'Starter' | 'Pro Cloud' | 'Enterprise Multi-Campus';
+  monthlyFeeInr?: number;
+  createdAt?: string;
+  subdomain?: string;
+  primaryContactName?: string;
 }
 
 export interface User {
