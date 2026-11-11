@@ -16,8 +16,8 @@ export interface Institute {
   id: string;
   name: string;
   code: string;
-  type?: 'K12 School' | 'Coaching Academy' | 'Junior College' | 'International School' | 'Test Prep';
-  board?: 'CBSE' | 'ICSE' | 'State Board' | 'IB International' | 'Integrated JEE/NEET';
+  type?: 'K12 School' | 'Coaching Academy' | 'Junior College' | 'International School' | 'Test Prep' | string;
+  board?: 'CBSE' | 'ICSE' | 'State Board' | 'IB International' | 'Integrated JEE/NEET' | string;
   address?: string;
   phone?: string;
   email: string;

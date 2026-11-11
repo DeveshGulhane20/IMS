@@ -19,6 +19,7 @@ import {
   Building2
 } from 'lucide-react';
 import { useIMS } from '../../context/IMSContext';
+import { useAuth } from '../../context/AuthContext';
 import { Role } from '../../types/ims';
 import { AveriqTenantSwitcher } from './AveriqTenantSwitcher';
 
@@ -44,6 +45,8 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
     teachers,
     inquiries
   } = useIMS();
+
+  const { profile, user, isPlatformAdmin, signOut } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -154,8 +157,43 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
     }
   ];
 
-  // Profile avatar, name, and email per role
+  // Profile avatar, name, and email per role (prefers authenticated Supabase profile if signed in)
   const getPersonaDetails = () => {
+    if (profile) {
+      const displayName = profile.full_name || profile.email.split('@')[0] || 'Member';
+      const initials = displayName
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'U';
+      const roleLabel = isPlatformAdmin
+        ? 'Platform Super Admin'
+        : role === 'ADMIN'
+        ? 'Institute Admin'
+        : role === 'TEACHER'
+        ? 'Faculty Member'
+        : role === 'PARENT'
+        ? 'Parent Guardian'
+        : 'Student Member';
+
+      return {
+        initials,
+        name: displayName,
+        email: profile.email,
+        roleLabel,
+        color: isPlatformAdmin
+          ? 'from-amber-500 to-orange-600'
+          : role === 'ADMIN'
+          ? 'from-blue-600 to-cyan-600'
+          : role === 'TEACHER'
+          ? 'from-emerald-600 to-teal-600'
+          : role === 'PARENT'
+          ? 'from-indigo-600 to-purple-600'
+          : 'from-blue-600 to-indigo-600'
+      };
+    }
+
     if (role === 'STUDENT') {
       return {
         initials: 'RS',
@@ -466,35 +504,36 @@ export const AveriqTopNav: React.FC<AveriqTopNavProps> = ({
                   <span>Mobile Screen Simulator</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileOpen(false);
-                    onNavigateTab('super_dash');
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-amber-300 hover:bg-amber-950/40 hover:text-amber-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Super Admin Control Center</span>
-                </button>
-              </div>
-
-              {/* Clean Sign Out CTA */}
-              {onSwitchRole && (
-                <div className="pt-1.5 mt-1 border-t border-slate-800">
+                {isPlatformAdmin && (
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileOpen(false);
-                      onSwitchRole();
+                      onNavigateTab('super_dash');
                     }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center gap-2.5 transition-colors font-medium cursor-pointer"
+                    className="w-full text-left px-3 py-2 rounded-xl text-amber-300 hover:bg-amber-950/40 hover:text-amber-200 flex items-center gap-2.5 transition-colors cursor-pointer"
                   >
-                    <LogOut className="w-4 h-4 shrink-0" />
-                    <span>Sign Out</span>
+                    <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Super Admin Control Center</span>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
+
+              {/* Clean Sign Out CTA */}
+              <div className="pt-1.5 mt-1 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsProfileOpen(false);
+                    await signOut();
+                    if (onSwitchRole) onSwitchRole();
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 flex items-center gap-2.5 transition-colors font-medium cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

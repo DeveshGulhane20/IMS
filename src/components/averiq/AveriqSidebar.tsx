@@ -117,7 +117,6 @@ export const AveriqSidebar: React.FC<AveriqSidebarProps> = ({
 
     // Default: Administrator
     return [
-      { id: 'super_dash', label: 'Super Admin HQ', icon: ShieldCheck, badge: 'Cloud' },
       { id: 'dash', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'cls', label: 'Subject and Classes', icon: Layers, badge: '12' },
       { id: 'stu', label: 'Students', icon: Users, badge: '50' },

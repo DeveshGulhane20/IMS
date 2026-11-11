@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   Plus,
@@ -24,10 +24,13 @@ import {
   Mail,
   MapPin,
   Clock,
-  Laptop
+  Laptop,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 import { useIMS } from '../../context/IMSContext';
 import { Institute } from '../../types/ims';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 
 interface AveriqSuperAdminControlCenterProps {
   onEnterInstitute?: (instituteId: string) => void;
@@ -69,31 +72,66 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
 
   const [selectedInstDetails, setSelectedInstDetails] = useState<Institute | null>(null);
 
-  // Filtered institutes list
-  const filteredInstitutes = institutes.filter(inst => {
+  // Live database state
+  const [dbInstitutes, setDbInstitutes] = useState<any[]>([]);
+  const [isLoadingDb, setIsLoadingDb] = useState<boolean>(true);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  const fetchInstitutesFromDatabase = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setIsLoadingDb(false);
+      return;
+    }
+
+    setIsLoadingDb(true);
+    setDbError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('institutes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        setDbError(error.message);
+        setDbInstitutes([]);
+      } else {
+        setDbInstitutes(data || []);
+      }
+    } catch (err: any) {
+      setDbError(err?.message || 'Failed to query database');
+      setDbInstitutes([]);
+    } finally {
+      setIsLoadingDb(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInstitutesFromDatabase();
+  }, []);
+
+  // Filtered institutes list from real database records
+  const filteredInstitutes = dbInstitutes.filter(inst => {
     const matchesSearch =
-      inst.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inst.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (inst.name && inst.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (inst.code && inst.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (inst.email && inst.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (inst.subdomain && inst.subdomain.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesType =
       filterType === 'All' ||
-      inst.type === filterType ||
-      inst.plan === filterType;
+      inst.institute_type === filterType ||
+      inst.board === filterType;
 
     return matchesSearch && matchesType;
   });
 
-  // Cross-tenant aggregated metrics
-  const totalTenants = institutes.length;
-  const activeTenants = institutes.filter(i => (i.status || 'Active') === 'Active').length;
-  const totalGlobalStudents = institutes.reduce((acc, i) => acc + (i.totalStudents || 50), 0);
-  const totalGlobalFaculty = institutes.reduce((acc, i) => acc + (i.totalFaculty || 5), 0);
-  const totalMonthlyMRR = institutes.reduce((acc, i) => acc + (i.monthlyFeeInr || 15000), 0);
+  // Real database metrics (no fabricated data)
+  const totalTenants = dbInstitutes.length;
+  const activeTenants = dbInstitutes.filter(i => i.is_active !== false).length;
 
   const handleOpenProvisionModal = () => {
-    const nextNum = institutes.length + 1;
+    const nextNum = dbInstitutes.length + 1;
     setProvisionForm({
       name: '',
       code: `INS-202${nextNum}`,
@@ -131,35 +169,8 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
 
   const handleProvisionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!provisionForm.name.trim()) {
-      showToast('Please enter the official Institute Name');
-      return;
-    }
-    if (!provisionForm.email.trim()) {
-      showToast('Please provide an administrative email for this tenant');
-      return;
-    }
-
-    const created = provisionInstitute({
-      name: provisionForm.name.trim(),
-      code: provisionForm.code || `INST-${Date.now().toString().slice(-4)}`,
-      type: provisionForm.type,
-      board: provisionForm.board,
-      subdomain: provisionForm.subdomain || `${provisionForm.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.averiq.edu`,
-      primaryContactName: provisionForm.primaryContactName || 'Director / Dean',
-      email: provisionForm.email.trim(),
-      phone: provisionForm.phone || '+91 98000 00000',
-      address: provisionForm.address || 'City Campus',
-      campusCount: Number(provisionForm.campusCount) || 1,
-      plan: provisionForm.plan,
-      monthlyFeeInr: Number(provisionForm.monthlyFeeInr) || 15000,
-      totalStudents: Number(provisionForm.totalStudents) || 35,
-      totalFaculty: Number(provisionForm.totalFaculty) || 4,
-      status: 'Active'
-    });
-
+    showToast('Institute creation is disabled for now. Real institute provisioning requires database migrations to be applied to your Supabase project.');
     setIsProvisionModalOpen(false);
-    showToast(`Tenant "${created.name}" provisioned successfully with isolated database partition!`);
   };
 
   const handleLaunchTenantPortal = (inst: Institute) => {
@@ -227,7 +238,7 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
         </div>
       </div>
 
-      {/* 2. Top Metric Cards: Cross-Tenant KPIs */}
+      {/* 2. Top Metric Cards: Real Database KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Total Provisioned Institutes */}
         <div
@@ -242,12 +253,16 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-[#122D4A] font-mono">{activeTenants}</span>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-              100% Online
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+              totalTenants > 0 ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-100'
+            }`}>
+              {totalTenants > 0 ? `${activeTenants} Active` : '0 Active'}
             </span>
           </div>
           <p className="text-[11px] text-[#8EA0B4] mt-2">
-            AV Achievers &amp; Shapers Academy live on separate subdomains
+            {totalTenants > 0
+              ? `${activeTenants} of ${totalTenants} institutes online in database`
+              : 'Supabase public.institutes currently has 0 rows'}
           </p>
         </div>
 
@@ -263,11 +278,13 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#122D4A] font-mono">{totalGlobalStudents}</span>
-            <span className="text-xs font-medium text-[#5A7184]">Unified Database</span>
+            <span className="text-xl font-bold text-slate-400 font-mono">No data yet</span>
+            <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+              Not Configured
+            </span>
           </div>
           <p className="text-[11px] text-[#8EA0B4] mt-2">
-            50 AV Achievers + 68 Shapers Academy cohort
+            Student records table not yet provisioned in Supabase
           </p>
         </div>
 
@@ -284,14 +301,14 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-[#122D4A] font-mono">
-              ₹{(totalMonthlyMRR).toLocaleString('en-IN')}
+              ₹0
             </span>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-              +18% MoM
+            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+              ₹0 / mo
             </span>
           </div>
           <p className="text-[11px] text-[#8EA0B4] mt-2">
-            Active recurring subscriptions collected automatically
+            No active subscription billing records recorded
           </p>
         </div>
 
@@ -307,11 +324,13 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-[#122D4A] font-mono">{totalGlobalFaculty}</span>
-            <span className="text-xs font-medium text-[#5A7184]">Instructors</span>
+            <span className="text-xl font-bold text-slate-400 font-mono">No data yet</span>
+            <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+              Not Configured
+            </span>
           </div>
           <p className="text-[11px] text-[#8EA0B4] mt-2">
-            Master teaching staff across all connected campuses
+            Faculty records table not yet provisioned in Supabase
           </p>
         </div>
       </div>
@@ -326,7 +345,7 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
           <div>
             <h2 className="text-lg font-bold text-[#122D4A]">Provisioned Institution Tenants</h2>
             <p className="text-xs text-[#5A7184]">
-              Each institution operates in its own isolated workspace with distinct branding, rosters, and fee books.
+              Institutes queried in real time from Supabase <code className="font-mono text-[#3979C5]">public.institutes</code> table
             </p>
           </div>
 
@@ -349,127 +368,148 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
               onChange={e => setFilterType(e.target.value)}
               className="px-3 py-2 rounded-xl text-xs bg-[#F8FBFF] border border-[#D5E5F7] text-[#122D4A] font-medium focus:outline-none cursor-pointer"
             >
-              <option value="All">All Tiers &amp; Types</option>
-              <option value="K12 School & Integrated Coaching">K12 School &amp; Coaching</option>
-              <option value="Coaching Academy & Test Prep">Coaching &amp; Test Prep</option>
-              <option value="Pro Cloud">Pro Cloud Plan</option>
-              <option value="Enterprise Multi-Campus">Enterprise Multi-Campus</option>
+              <option value="All">All Types &amp; Boards</option>
+              <option value="school">School</option>
+              <option value="coaching">Coaching</option>
+              <option value="junior_college">Junior College</option>
+              <option value="college">College</option>
+              <option value="tuition">Tuition</option>
             </select>
+
+            <button
+              type="button"
+              onClick={fetchInstitutesFromDatabase}
+              title="Refresh database records"
+              className="p-2 rounded-xl border border-[#D5E5F7] hover:bg-[#F8FBFF] text-[#5A7184] hover:text-[#122D4A] transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingDb ? 'animate-spin text-[#3979C5]' : ''}`} />
+            </button>
           </div>
         </div>
 
-        {/* Tenant Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filteredInstitutes.map((inst) => {
-            const isCurrentActive = inst.id === activeInstituteId;
-            return (
-              <div
-                key={inst.id}
-                className={`p-5 rounded-2xl border transition-all ${
-                  isCurrentActive
-                    ? 'border-[#3979C5] bg-[#F8FBFF] ring-2 ring-[#3979C5]/20'
-                    : 'border-[#E2EDF8] bg-white hover:border-[#C5DDF5] hover:shadow-md'
-                }`}
+        {/* Tenant Cards Grid or Empty State */}
+        {isLoadingDb ? (
+          <div className="p-12 text-center bg-[#F8FBFF] border border-[#D5E5F7] rounded-2xl space-y-3">
+            <RefreshCw className="w-7 h-7 text-[#3979C5] mx-auto animate-spin" />
+            <h3 className="text-sm font-bold text-[#122D4A]">Querying Supabase Database...</h3>
+            <p className="text-xs text-[#5A7184]">Retrieving live records from public.institutes table</p>
+          </div>
+        ) : filteredInstitutes.length === 0 ? (
+          <div className="p-10 text-center bg-[#F8FBFF] border border-[#D5E5F7] rounded-2xl space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 text-[#3979C5] flex items-center justify-center">
+              <Building2 className="w-7 h-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-[#122D4A]">No Institutes in Supabase Database</h3>
+              <p className="text-xs text-[#5A7184] max-w-md mx-auto leading-relaxed">
+                Connected to Supabase project <code className="font-mono text-[#3979C5] font-bold">swiyarbnwegplblggsqa</code>. The <code className="font-mono">public.institutes</code> table currently has 0 rows.
+              </p>
+              {dbError && (
+                <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 py-1.5 px-3 rounded-lg max-w-md mx-auto mt-2">
+                  Database query notice: {dbError}
+                </div>
+              )}
+            </div>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={handleOpenProvisionModal}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3979C5] hover:bg-[#205BA3] text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 cursor-pointer"
               >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-white border border-[#D5E5F7] p-1.5 shadow-xs flex items-center justify-center shrink-0">
-                      {inst.logoUrl ? (
-                        <img src={inst.logoUrl} alt={inst.name} className="w-full h-full object-contain" />
-                      ) : (
-                        <Building2 className="w-6 h-6 text-[#3979C5]" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-sm text-[#122D4A]">{inst.name}</h3>
-                        {isCurrentActive && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#3979C5] text-white">
-                            CURRENT ACTIVE
-                          </span>
+                <Plus className="w-4 h-4" />
+                <span>Provision New Institute</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {filteredInstitutes.map((inst) => {
+              const isCurrentActive = inst.id === activeInstituteId;
+              return (
+                <div
+                  key={inst.id}
+                  className={`p-5 rounded-2xl border transition-all ${
+                    isCurrentActive
+                      ? 'border-[#3979C5] bg-[#F8FBFF] ring-2 ring-[#3979C5]/20'
+                      : 'border-[#E2EDF8] bg-white hover:border-[#C5DDF5] hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-white border border-[#D5E5F7] p-1.5 shadow-xs flex items-center justify-center shrink-0">
+                        {inst.logo_url ? (
+                          <img src={inst.logo_url} alt={inst.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <Building2 className="w-6 h-6 text-[#3979C5]" />
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-[#5A7184] mt-0.5">
-                        <span className="font-mono font-semibold text-[#122D4A]">{inst.code}</span>
-                        <span>•</span>
-                        <span>{inst.board || 'CBSE'}</span>
-                        <span>•</span>
-                        <span className="text-[#3979C5] font-medium">{inst.type}</span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-sm text-[#122D4A]">{inst.name}</h3>
+                          {isCurrentActive && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#3979C5] text-white">
+                              CURRENT ACTIVE
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-[#5A7184] mt-0.5">
+                          <span className="font-mono font-semibold text-[#122D4A]">{inst.code}</span>
+                          <span>•</span>
+                          <span>{inst.board || 'CBSE'}</span>
+                          <span>•</span>
+                          <span className="text-[#3979C5] font-medium capitalize">{inst.institute_type || 'Coaching'}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    {inst.status || 'Active'}
-                  </span>
-                </div>
-
-                {/* Subdomain & Contact metadata */}
-                <div className="p-3 rounded-xl bg-white border border-[#EBF3FC] space-y-1.5 text-xs text-[#5A7184] mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-[#8EA0B4]">Dedicated Subdomain:</span>
-                    <span className="font-mono text-[#3979C5] font-bold flex items-center gap-1">
-                      <Globe className="w-3 h-3" />
-                      {inst.subdomain || `${inst.code.toLowerCase()}.averiq.edu`}
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {inst.is_active !== false ? 'Active' : 'Suspended'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-[#8EA0B4]">Principal / Dean:</span>
-                    <span className="font-medium text-[#122D4A]">{inst.primaryContactName || 'Director Office'}</span>
+
+                  {/* Subdomain & Contact metadata */}
+                  <div className="p-3 rounded-xl bg-white border border-[#EBF3FC] space-y-1.5 text-xs text-[#5A7184] mb-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-[#8EA0B4]">Dedicated Subdomain:</span>
+                      <span className="font-mono text-[#3979C5] font-bold flex items-center gap-1">
+                        <Globe className="w-3 h-3" />
+                        {inst.subdomain || `${inst.code.toLowerCase()}.averiq.edu`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-[#8EA0B4]">Email:</span>
+                      <span className="font-medium text-[#122D4A]">{inst.email || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-[#8EA0B4]">City:</span>
+                      <span className="font-medium text-[#122D4A]">{inst.city || 'N/A'}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-[#8EA0B4]">Subscription Plan:</span>
-                    <span className="font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded">
-                      {inst.plan || 'Pro Cloud'} (₹{(inst.monthlyFeeInr || 15000).toLocaleString('en-IN')}/mo)
-                    </span>
+
+                  {/* Action CTAs */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleLaunchTenantPortal(inst)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-[#3979C5] to-[#205BA3] hover:from-[#2e6bb5] hover:to-[#174b8c] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Enter {inst.name} Portal</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedInstDetails(inst)}
+                      className="py-2 px-3 rounded-xl bg-white hover:bg-[#F8FBFF] border border-[#D5E5F7] text-[#122D4A] text-xs font-semibold transition-all cursor-pointer"
+                    >
+                      Tenant Details
+                    </button>
                   </div>
                 </div>
-
-                {/* Stats Row */}
-                <div className="grid grid-cols-3 gap-2 text-center text-xs pb-4 border-b border-[#F0F5FA] mb-4">
-                  <div className="p-2 rounded-lg bg-[#F8FBFF]">
-                    <div className="text-base font-extrabold text-[#122D4A] font-mono">
-                      {inst.totalStudents || 50}
-                    </div>
-                    <div className="text-[10px] text-[#8EA0B4] font-medium">Students</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-[#F8FBFF]">
-                    <div className="text-base font-extrabold text-[#122D4A] font-mono">
-                      {inst.totalFaculty || 5}
-                    </div>
-                    <div className="text-[10px] text-[#8EA0B4] font-medium">Faculty</div>
-                  </div>
-                  <div className="p-2 rounded-lg bg-[#F8FBFF]">
-                    <div className="text-base font-extrabold text-[#122D4A] font-mono">
-                      {inst.campusCount || 1}
-                    </div>
-                    <div className="text-[10px] text-[#8EA0B4] font-medium">Campuses</div>
-                  </div>
-                </div>
-
-                {/* Action CTAs */}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleLaunchTenantPortal(inst)}
-                    className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-[#3979C5] to-[#205BA3] hover:from-[#2e6bb5] hover:to-[#174b8c] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Enter {inst.name} Portal</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedInstDetails(inst)}
-                    className="py-2 px-3 rounded-xl bg-white hover:bg-[#F8FBFF] border border-[#D5E5F7] text-[#122D4A] text-xs font-semibold transition-all cursor-pointer"
-                  >
-                    Tenant Details
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 4. Architecture & Technical Isolation Strip */}
@@ -555,6 +595,17 @@ export const AveriqSuperAdminControlCenter: React.FC<AveriqSuperAdminControlCent
             </div>
 
             <form onSubmit={handleProvisionSubmit} className="space-y-4 text-xs">
+              {/* Provisioning Paused Notice */}
+              <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-800 flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-xs text-amber-900">Institute Provisioning Paused</p>
+                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                    Live institute creation is disabled in this phase. Real tenant provisioning requires database migrations and schema tables to be applied in your Supabase project.
+                  </p>
+                </div>
+              </div>
+
               {/* Row 1: Name & Code */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2 space-y-1">

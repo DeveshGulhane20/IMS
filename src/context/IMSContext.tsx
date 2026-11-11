@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   Role,
   Institute,
@@ -286,20 +287,80 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [financeTransactions, setFinanceTransactions] = useState<FinanceTransaction[]>(mockFinanceTransactions);
   const [substitutes, setSubstitutes] = useState<SubstituteAssignment[]>(mockSubstituteAssignments);
   // Multi-Tenant Cloud State & Tenant Maps
-  const [institutesList, setInstitutesList] = useState<Institute[]>(initialInstitutes);
-  const [activeInstituteId, setActiveInstituteId] = useState<string>('inst-av-achievers');
+  const [institutesList, setInstitutesList] = useState<Institute[]>([]);
+  const [activeInstituteId, setActiveInstituteId] = useState<string>('');
 
-  const [tenantStudentsMap, setTenantStudentsMap] = useState<Record<string, DetailedStudent[]>>({
-    'inst-av-achievers': initialAcademicStudents,
-    'inst-shapers-academy': shapersAcademyStudents
-  });
-  const [tenantTeachersMap, setTenantTeachersMap] = useState<Record<string, DetailedTeacher[]>>({
-    'inst-av-achievers': initialAcademicTeachers,
-    'inst-shapers-academy': shapersAcademyTeachers
-  });
+  // Fetch live institutes from Supabase when database is connected
+  useEffect(() => {
+    let isMounted = true;
 
-  const activeInstitute = useMemo(() => {
-    return institutesList.find(i => i.id === activeInstituteId) || institutesList[0];
+    async function loadInstitutes() {
+      if (!isSupabaseConfigured || !supabase) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('institutes')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!isMounted) return;
+        if (!error && data) {
+          const mapped: Institute[] = data.map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            code: d.code,
+            type: d.institute_type,
+            board: d.board || 'CBSE',
+            address: d.address || '',
+            phone: d.phone || '',
+            email: d.email || '',
+            logoUrl: d.logo_url || '',
+            campusCount: 1,
+            totalStudents: 0,
+            totalFaculty: 0,
+            status: d.is_active ? 'Active' : 'Suspended',
+            plan: 'Pro Cloud',
+            monthlyFeeInr: 0,
+            subdomain: d.subdomain || '',
+            createdAt: d.created_at
+          }));
+          setInstitutesList(mapped);
+          if (mapped.length > 0) {
+            setActiveInstituteId(mapped[0].id);
+          } else {
+            setActiveInstituteId('');
+          }
+        }
+      } catch (err) {
+        // safe fallback
+      }
+    }
+
+    loadInstitutes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const [tenantStudentsMap, setTenantStudentsMap] = useState<Record<string, DetailedStudent[]>>({});
+  const [tenantTeachersMap, setTenantTeachersMap] = useState<Record<string, DetailedTeacher[]>>({});
+
+  const activeInstitute: Institute = useMemo(() => {
+    return (
+      institutesList.find(i => i.id === activeInstituteId) ||
+      institutesList[0] || {
+        id: 'none',
+        name: 'No Active Institute',
+        code: 'N/A',
+        email: '',
+        campusCount: 0,
+        totalStudents: 0,
+        totalFaculty: 0,
+        status: 'Active',
+        plan: 'Pro Cloud'
+      }
+    );
   }, [institutesList, activeInstituteId]);
 
   const academicStudentsList = tenantStudentsMap[activeInstituteId] || initialAcademicStudents;
@@ -335,40 +396,14 @@ export const IMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const provisionInstitute = (newInst: Omit<Institute, 'id'>): Institute => {
-    const newId = `inst-${newInst.code.toLowerCase().replace(/[^a-z0-9]/g, '-') || Date.now()}`;
+    // Institute creation and sample data seeding are disabled pending backend database migrations
+    showToast('Institute provisioning is disabled pending database deployment. No records seeded.');
     const fullInst: Institute = {
       ...newInst,
-      id: newId,
-      status: newInst.status || 'Active',
-      createdAt: newInst.createdAt || new Date().toISOString().split('T')[0]
+      id: `inst-disabled`,
+      status: 'Trial',
+      createdAt: new Date().toISOString().split('T')[0]
     };
-
-    setInstitutesList(prev => [fullInst, ...prev]);
-
-    // Seed default sample cohort for the new tenant
-    const seedStudents: DetailedStudent[] = initialAcademicStudents.slice(0, 15).map((st, idx) => ({
-      ...st,
-      id: `stu-${newInst.code.toLowerCase()}-${idx + 1}`,
-      studentCode: `${newInst.code}-2025-${String(idx + 1).padStart(3, '0')}`,
-      board: newInst.board || 'CBSE'
-    }));
-
-    const seedTeachers: DetailedTeacher[] = initialAcademicTeachers.slice(0, 3).map((tch, idx) => ({
-      ...tch,
-      id: `fac-${newInst.code.toLowerCase()}-${idx + 1}`,
-      employeeCode: `${newInst.code}-FAC-${String(idx + 1).padStart(2, '0')}`
-    }));
-
-    setTenantStudentsMap(prev => ({
-      ...prev,
-      [newId]: seedStudents
-    }));
-
-    setTenantTeachersMap(prev => ({
-      ...prev,
-      [newId]: seedTeachers
-    }));
-
     return fullInst;
   };
 

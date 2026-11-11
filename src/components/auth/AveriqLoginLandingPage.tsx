@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Role } from '../../types/ims';
 import { AveriqLogo } from '../averiq/AveriqLogo';
+import { useAuth } from '../../context/AuthContext';
 
 interface AveriqLoginLandingPageProps {
   onSelectRole: (role: Role) => void;
@@ -41,9 +42,6 @@ interface RoleConfig {
   gradient: string;
   identifierLabel: string;
   identifierPlaceholder: string;
-  defaultIdentifier: string;
-  sampleName: string;
-  sampleDetail: string;
   description: string;
 }
 
@@ -57,10 +55,7 @@ const ROLE_CONFIGS: Record<Role, RoleConfig> = {
     icon: Building2,
     gradient: 'from-[#3979C5] to-[#122D4A]',
     identifierLabel: 'Administrator Email',
-    identifierPlaceholder: 'admin@averiq.edu',
-    defaultIdentifier: 'admin@averiq.edu',
-    sampleName: 'School Administrator',
-    sampleDetail: 'Supervisory Control & Analytics',
+    identifierPlaceholder: 'admin@institution.edu',
     description: 'Full school analytics, staff directory, fee collections, admissions CRM, and reports.'
   },
   TEACHER: {
@@ -71,11 +66,8 @@ const ROLE_CONFIGS: Record<Role, RoleConfig> = {
     badgeColor: 'bg-[#F2EDFB] text-[#7C3AED] border-[#E2D5F8]',
     icon: Award,
     gradient: 'from-[#7C3AED] to-[#3979C5]',
-    identifierLabel: 'Faculty Employee ID or Email',
-    identifierPlaceholder: 'rajesh.math@averiq.edu',
-    defaultIdentifier: 'rajesh.sir@faculty.averiq.edu',
-    sampleName: 'Prof. Rajesh Sir',
-    sampleDetail: 'Department of Mathematics & Science',
+    identifierLabel: 'Faculty Employee Email',
+    identifierPlaceholder: 'faculty@institution.edu',
     description: 'Manage class attendance, evaluate online tests, assign homework, and post syllabus notes.'
   },
   STUDENT: {
@@ -86,11 +78,8 @@ const ROLE_CONFIGS: Record<Role, RoleConfig> = {
     badgeColor: 'bg-[#EBF7FD] text-[#0284C7] border-[#CDEBFA]',
     icon: GraduationCap,
     gradient: 'from-[#0284C7] to-[#3979C5]',
-    identifierLabel: 'Student Roll Code (PRN) or Email',
-    identifierPlaceholder: 'STU-2025-001 or rohan@student.averiq.edu',
-    defaultIdentifier: 'STU-2025-001',
-    sampleName: 'Rohan Sharma',
-    sampleDetail: 'Class 10 | Science Batch 2025-26',
+    identifierLabel: 'Student Registered Email',
+    identifierPlaceholder: 'student@institution.edu',
     description: 'Access class timetables, study material downloads, test marks & pending assignments.'
   },
   PARENT: {
@@ -101,11 +90,8 @@ const ROLE_CONFIGS: Record<Role, RoleConfig> = {
     badgeColor: 'bg-[#EDF8F4] text-[#059669] border-[#CEEFE3]',
     icon: Users,
     gradient: 'from-[#059669] to-[#3979C5]',
-    identifierLabel: 'Registered Mobile Number or Email',
-    identifierPlaceholder: '+91 98765 43210 or parent@averiq.edu',
-    defaultIdentifier: 'sharma.family@averiq.edu',
-    sampleName: 'Mr. & Mrs. Sharma',
-    sampleDetail: 'Ward: Rohan Sharma (Class 10A)',
+    identifierLabel: 'Parent Registered Email',
+    identifierPlaceholder: 'parent@institution.edu',
     description: 'Daily attendance status, online fee payment receipts & teacher feedback.'
   },
   SUPER_ADMIN: {
@@ -117,10 +103,7 @@ const ROLE_CONFIGS: Record<Role, RoleConfig> = {
     icon: ShieldCheck,
     gradient: 'from-[#D97706] to-[#122D4A]',
     identifierLabel: 'Super Admin Master Email',
-    identifierPlaceholder: 'superadmin@averiq.io',
-    defaultIdentifier: 'superadmin@averiq.io',
-    sampleName: 'Averiq Platform Director',
-    sampleDetail: 'Multi-Tenant Cloud Operations & Provisioning',
+    identifierPlaceholder: 'operator@averiq.io',
     description: 'Global multi-tenant control center: provision new institutes, manage cloud databases, subscription tiers, and tenant switching.'
   }
 };
@@ -129,10 +112,11 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
   onSelectRole,
   onSkipToDashboard
 }) => {
+  const { signIn, isConfigured, getAppRoleForProfile } = useAuth();
   const [selectedRole, setSelectedRole] = useState<Role>('ADMIN');
   const [authMode, setAuthMode] = useState<AuthMode>('CREDENTIALS');
-  const [identifier, setIdentifier] = useState(ROLE_CONFIGS.ADMIN.defaultIdentifier);
-  const [password, setPassword] = useState('averiq@2025');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -157,14 +141,14 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
 
   const handleRoleChange = (role: Role) => {
     setSelectedRole(role);
-    setIdentifier(ROLE_CONFIGS[role].defaultIdentifier);
     setErrorMsg('');
+    setSuccessToast('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier.trim()) {
-      setErrorMsg('Please enter your registered email, mobile, or roll code');
+      setErrorMsg('Please enter your registered email address');
       return;
     }
     if (!password.trim()) {
@@ -172,38 +156,58 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
       return;
     }
 
+    if (!isConfigured) {
+      setErrorMsg(
+        'Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to connect to your live project.'
+      );
+      return;
+    }
+
     setIsLoading(true);
     setErrorMsg('');
+    setSuccessToast('');
 
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await signIn(identifier, password);
+      if (!res.success) {
+        setIsLoading(false);
+        setErrorMsg(res.error || 'Authentication failed. Please verify your credentials.');
+        return;
+      }
+
+      // Check role authorization from profile
+      const roleCheck = getAppRoleForProfile(selectedRole);
+      if (!roleCheck.allowed) {
+        setIsLoading(false);
+        setErrorMsg(roleCheck.reason || 'Access Denied: You do not have permissions for this portal.');
+        return;
+      }
+
       setSuccessToast(`Welcome back! Authenticating into ${currentConfig.title}...`);
       setTimeout(() => {
-        onSelectRole(selectedRole);
-      }, 650);
-    }, 550);
+        setIsLoading(false);
+        onSelectRole(roleCheck.role);
+      }, 500);
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMsg(err?.message || 'An error occurred during authentication.');
+    }
   };
 
   const handleGoogleSignIn = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setSuccessToast(`Google SSO authorized. Launching ${currentConfig.title}...`);
-      setTimeout(() => {
-        onSelectRole(selectedRole);
-      }, 650);
-    }, 550);
+    if (!isConfigured) {
+      setErrorMsg('Supabase is not configured. Please configure environment variables.');
+      return;
+    }
+    setErrorMsg('Third-party Google SSO requires OAuth provider configuration in your Supabase project settings.');
   };
 
   const handleEnterpriseSSO = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setSuccessToast(`Institute SSO authorized. Launching ${currentConfig.title}...`);
-      setTimeout(() => {
-        onSelectRole(selectedRole);
-      }, 650);
-    }, 550);
+    if (!isConfigured) {
+      setErrorMsg('Supabase is not configured. Please configure environment variables.');
+      return;
+    }
+    setErrorMsg('Institute SAML/Enterprise SSO requires enterprise identity provider setup in Supabase.');
   };
 
   return (
@@ -233,18 +237,6 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
           >
             <HelpCircle className="w-3.5 h-3.5 text-[#3979C5]" />
             <span className="hidden sm:inline">Need Help?</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (onSkipToDashboard) onSkipToDashboard();
-              else onSelectRole('ADMIN');
-            }}
-            className="text-xs font-bold px-4 py-2 rounded-xl bg-[#3979C5] hover:bg-[#2F68AC] text-white shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
-          >
-            <span>Explore Live Dashboard</span>
-            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
@@ -321,20 +313,20 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
               </div>
             </div>
 
-            {/* Institutional Trust & Compliance Strip */}
+            {/* Institutional Trust & Security Strip */}
             <div className="space-y-3 pt-1">
               <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-[#5A7184]">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-[#059669]" />
-                  <span>256-Bit SSL Encrypted</span>
+                  <span>256-Bit SSL Transport Security</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-[#3979C5]" />
-                  <span>ISO 27001 Certified</span>
+                  <span>Row-Level Security (RLS) Enforced</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Lock className="w-4 h-4 text-[#7C3AED]" />
-                  <span>FERPA &amp; GDPR Compliant</span>
+                  <span>Multi-Tenant Schema Partitioning</span>
                 </div>
               </div>
 
@@ -414,9 +406,32 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
                 </span>
               </div>
 
+              {/* Supabase Connection Status Indicator */}
+              <div className="mt-4">
+                {!isConfigured ? (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-[11px] text-amber-800">Supabase Connection Pending</p>
+                      <p className="text-[11px] text-amber-700 leading-snug">
+                        Live authentication requires <code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono text-[10px]">VITE_SUPABASE_URL</code> and <code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono text-[10px]">VITE_SUPABASE_ANON_KEY</code>.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-[11px] flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="font-semibold text-emerald-900">Supabase Auth Gateway Active</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full font-mono font-medium">live</span>
+                  </div>
+                )}
+              </div>
+
               {/* Error Message */}
               {errorMsg && (
-                <div className="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
+                <div className="mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                   <span>{errorMsg}</span>
                 </div>
@@ -613,7 +628,7 @@ export const AveriqLoginLandingPage: React.FC<AveriqLoginLandingPageProps> = ({
                   <CheckCircle2 className="w-4 h-4 text-[#059669]" />
                   <span>Recovery Link Dispatched!</span>
                 </div>
-                <p>We’ve sent verification instructions to <strong>{forgotInput || currentConfig.defaultIdentifier}</strong>.</p>
+                <p>We’ve sent verification instructions to <strong>{forgotInput || 'your registered email'}</strong>.</p>
                 <button
                   type="button"
                   onClick={() => {

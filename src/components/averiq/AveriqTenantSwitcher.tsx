@@ -77,14 +77,16 @@ export const AveriqTenantSwitcher: React.FC<AveriqTenantSwitcherProps> = ({
         <div className="flex flex-col min-w-0 pr-1">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-bold text-white truncate max-w-[130px] sm:max-w-[170px]">
-              {activeInstitute?.name || 'AV Achievers'}
+              {activeInstitute?.name || 'Averiq Institute'}
             </span>
-            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-500/30 text-blue-300 font-bold hidden sm:inline-block">
-              {activeInstitute?.code || 'AVA-101'}
-            </span>
+            {activeInstitute?.code && activeInstitute.code !== 'N/A' && (
+              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-500/30 text-blue-300 font-bold hidden sm:inline-block">
+                {activeInstitute.code}
+              </span>
+            )}
           </div>
           <span className="text-[10px] text-slate-400 font-medium truncate">
-            {activeInstitute?.board || 'CBSE'} • {activeInstitute?.type?.split(' ')[0] || 'School'}
+            {activeInstitute?.board ? `${activeInstitute.board} • ` : ''}{activeInstitute?.type?.split(' ')[0] || 'Multi-Tenant'}
           </span>
         </div>
 
@@ -109,7 +111,14 @@ export const AveriqTenantSwitcher: React.FC<AveriqTenantSwitcherProps> = ({
 
           {/* Institute List */}
           <div className="py-1.5 space-y-1 max-h-64 overflow-y-auto custom-scrollbar">
-            {institutes.map((inst) => {
+            {institutes.length === 0 ? (
+              <div className="p-4 text-center text-slate-400 text-xs space-y-1">
+                <Building2 className="w-5 h-5 mx-auto text-slate-500 mb-1" />
+                <p className="font-semibold text-slate-300">No Institutes Found</p>
+                <p className="text-[11px] text-slate-500">Database table public.institutes is currently empty.</p>
+              </div>
+            ) : (
+              institutes.map((inst) => {
               const isSelected = inst.id === activeInstituteId;
               return (
                 <button
@@ -158,7 +167,8 @@ export const AveriqTenantSwitcher: React.FC<AveriqTenantSwitcherProps> = ({
                   )}
                 </button>
               );
-            })}
+            })
+          )}
           </div>
 
           {/* Super Admin Control Center Quick Link */}

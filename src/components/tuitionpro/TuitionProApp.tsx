@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useIMS } from '../../context/IMSContext';
+import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { AveriqComingSoonTab } from '../averiq/AveriqComingSoonTab';
 import {
   LayoutDashboard,
   Users,
@@ -146,15 +149,100 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
     addBatch,
     addTimetableSlot
   } = useIMS();
+  const { profile, isPlatformAdmin } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState<string>(() => role === 'SUPER_ADMIN' ? 'super_dash' : 'dash');
+  // Route <-> Tab mappings
+  const tabToPath = (tabId: string): string => {
+    const map: Record<string, string> = {
+      super_dash: '/super-admin',
+      dash: '/dashboard',
+      cls: '/classes',
+      stu: '/students',
+      tea: '/teachers',
+      hw: '/homework',
+      att: '/attendance',
+      fee: '/fees',
+      ex: '/exams',
+      mk: '/marks',
+      evt: '/calendar',
+      cal: '/calendar',
+      tb: '/timetable',
+      mat: '/materials',
+      comm: '/communications',
+      notif: '/communications',
+      inq: '/inquiries',
+      roles: '/roles',
+      rep: '/reports',
+      set: '/settings',
+      por: '/parent-portal',
+      pf: '/progress',
+      ptm: '/ptm',
+      fin: '/finance',
+      usr: '/audit'
+    };
+    return map[tabId] || `/${tabId}`;
+  };
+
+  const pathToTab = (pathname: string): string => {
+    const clean = pathname.replace(/\/+$/, '') || '/';
+    const map: Record<string, string> = {
+      '/': 'default',
+      '/dashboard': 'dash',
+      '/super-admin': 'super_dash',
+      '/classes': 'cls',
+      '/students': 'stu',
+      '/teachers': 'tea',
+      '/homework': 'hw',
+      '/attendance': 'att',
+      '/fees': 'fee',
+      '/exams': 'ex',
+      '/marks': 'mk',
+      '/calendar': 'evt',
+      '/timetable': 'tb',
+      '/materials': 'mat',
+      '/communications': 'comm',
+      '/inquiries': 'inq',
+      '/roles': 'roles',
+      '/reports': 'rep',
+      '/settings': 'set',
+      '/parent-portal': 'por',
+      '/progress': 'pf',
+      '/ptm': 'ptm',
+      '/finance': 'fin',
+      '/audit': 'usr'
+    };
+    return map[clean] || clean.replace(/^\//, '') || 'dash';
+  };
+
+  const rawTab = pathToTab(location.pathname);
+  const activeTab = rawTab === 'default' ? 'dash' : rawTab;
+
+  const handleSelectTab = (tabId: string) => {
+    const targetPath = tabToPath(tabId);
+    navigate(targetPath);
+  };
+
+  // Provide setActiveTab as alias to handleSelectTab for backwards compatibility
+  const setActiveTab = handleSelectTab;
+
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // 1. Initial redirect when arriving on root '/' -> always open the Original Averiq Dashboard (Image 1)
   useEffect(() => {
-    if (role === 'SUPER_ADMIN') {
-      setActiveTab('super_dash');
+    if (location.pathname === '/' || location.pathname === '') {
+      navigate('/dashboard', { replace: true });
     }
-  }, [role]);
+  }, [location.pathname, navigate]);
+
+  // 2. Strict route protection: standard users are prevented from opening /super-admin
+  useEffect(() => {
+    if (activeTab === 'super_dash' && !isPlatformAdmin) {
+      showToast('Access Denied: Platform Administrator privileges required.');
+      navigate('/dashboard', { replace: true });
+    }
+  }, [activeTab, isPlatformAdmin, navigate, showToast]);
   const [quickModal, setQuickModal] = useState<'student' | 'teacher' | 'attendance' | 'fee' | 'exam' | 'inquiry' | 'help' | null>(null);
   const [activeReportsSubTab, setActiveReportsSubTab] = useState<'mk' | 'pf'>('mk');
   const [activeSettingsSubTab, setActiveSettingsSubTab] = useState<'crs' | 'usr' | 'tb' | 'mat' | 'ptm' | 'fin'>('crs');
@@ -413,13 +501,30 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
             </div>
           )}
 
-          {/* SUPER ADMIN HQ TAB */}
+          {/* SUPER ADMIN HQ TAB (PROTECTED ROUTE) */}
           {activeTab === 'super_dash' && (
-            <AveriqSuperAdminControlCenter
-              onEnterInstitute={(id) => {
-                setActiveTab('dash');
-              }}
-            />
+            isPlatformAdmin ? (
+              <AveriqSuperAdminControlCenter
+                onEnterInstitute={(id) => {
+                  setActiveTab('dash');
+                }}
+              />
+            ) : (
+              <div className="p-8 text-center bg-white border border-rose-200 rounded-2xl shadow-sm text-rose-800 space-y-2 max-w-xl mx-auto my-8">
+                <AlertTriangle className="w-8 h-8 text-rose-500 mx-auto" />
+                <h3 className="text-base font-bold text-[#122D4A]">Administrator Privileges Required</h3>
+                <p className="text-xs text-rose-700 max-w-md mx-auto">
+                  Your account does not possess verified platform_admin authority. Access to the global multi-tenant control center is restricted.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('dash')}
+                  className="mt-3 px-4 py-2 bg-[#3979C5] text-white rounded-xl text-xs font-bold hover:bg-[#2F68AC]"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            )
           )}
 
           {/* TAB 1: AVERIQ REDESIGNED DASHBOARD (ROLE-ADAPTIVE) */}
@@ -2055,6 +2160,41 @@ export const TuitionProApp: React.FC<TuitionProAppProps> = ({ onSwitchRole }) =>
 
           {/* COMMUNICATIONS & BROADCAST */}
           {(activeTab === 'comm' || activeTab === 'notif') && <AveriqCommunications />}
+
+          {/* FALLBACK FOR UNRECOGNIZED OR PENDING MODULES */}
+          {![
+            'super_dash',
+            'dash',
+            'por',
+            'tea',
+            'cls',
+            'stu',
+            'hw',
+            'inq',
+            'fee',
+            'att',
+            'evt',
+            'cal',
+            'tb',
+            'ex',
+            'mk',
+            'rep',
+            'pf',
+            'mat',
+            'crs',
+            'ptm',
+            'fin',
+            'usr',
+            'roles',
+            'comm',
+            'notif',
+            'set'
+          ].includes(activeTab) && (
+            <AveriqComingSoonTab
+              tabId={activeTab}
+              onReturnToDashboard={() => handleSelectTab('dash')}
+            />
+          )}
         </main>
       </div>
 
